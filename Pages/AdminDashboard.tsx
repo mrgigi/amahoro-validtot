@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../src/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle } from 'lucide-react';
+import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
 
@@ -30,6 +30,59 @@ export default function AdminDashboard() {
       }
       
       const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentUser
+  });
+
+  // Analytics queries
+  
+
+  const { data: postsCount = 0 } = useQuery({
+    queryKey: ['stats', 'posts_count'],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentUser
+  });
+
+  const { data: votesCount = 0 } = useQuery({
+    queryKey: ['stats', 'votes_count'],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('votes').select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentUser
+  });
+
+  const { data: commentsCount = 0 } = useQuery({
+    queryKey: ['stats', 'comments_count'],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('comments').select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentUser
+  });
+
+  const { data: pendingReportsCount = 0 } = useQuery({
+    queryKey: ['stats', 'pending_reports'],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'Pending');
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentUser
+  });
+
+  const { data: topPosts = [] } = useQuery({
+    queryKey: ['stats', 'top_posts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('posts').select('*').order('total_votes', { ascending: false }).limit(5);
       if (error) throw error;
       return data || [];
     },
@@ -168,7 +221,24 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{postsCount}</div><div className="font-bold ml-auto">Posts</div></div>
+          <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{votesCount}</div><div className="font-bold ml-auto">Votes</div></div>
+          <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{commentsCount}</div><div className="font-bold ml-auto">Comments</div></div>
+          <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{pendingReportsCount}</div><div className="font-bold ml-auto">Pending Reports</div></div>
+        </div>
+
+        <div className="mb-6 p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <div className="font-black text-2xl mb-3">Top Posts</div>
+          <div className="space-y-2">
+            {topPosts.map((p: any) => (
+              <div key={p.id} className="flex items-center justify-between p-3 border-2 border-black">
+                <div className="font-bold truncate max-w-[70%]">{p.title || 'Untitled'}</div>
+                <div className="font-black">{p.total_votes || 0}</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Filter Tabs */}
         <div className="flex gap-3 mb-6 flex-wrap">
