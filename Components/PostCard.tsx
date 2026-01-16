@@ -39,33 +39,70 @@ export default function PostCard({ post }) {
   }, [post.id]);
 
   const voteMutation = useMutation({
-    mutationFn: async (optionIndex: number) => {
-      // 1. Prepare new vote data
+    mutationFn: async ({ optionIndex, userId }: { optionIndex: number, userId: string }) => {
+      const { data: existingVote, error: existingError } = await supabase
+        .from('votes')
+        .select('id, option_index')
+        .eq('post_id', post.id)
+        .or(`user_id.eq.${userId},anonymous_id.eq.${anonymousId}`)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error('Error checking existing vote:', existingError);
+        throw existingError;
+      }
+
+      if (existingVote) {
+        const existingIndex = existingVote.option_index ?? 0;
+        localStorage.setItem(`vote_${post.id}`, existingIndex.toString());
+        setHasVoted(true);
+        setUserVote(existingIndex);
+        alert('You have already voted on this post.');
+        return existingIndex;
+      }
+
       const currentVotes = Array.isArray(post.votes) 
         ? [...post.votes] 
         : new Array(post.images?.length || post.options?.length || 2).fill(0);
-      
-      // Ensure the array is long enough (in case of schema mismatch)
+
       while (currentVotes.length <= optionIndex) {
         currentVotes.push(0);
       }
-      
+
       currentVotes[optionIndex] = (currentVotes[optionIndex] || 0) + 1;
       const newTotal = (post.total_votes || 0) + 1;
 
-      // 2. Record the individual vote
       const { error: voteError } = await supabase.from('votes').insert({
         post_id: post.id,
         option_index: optionIndex,
-        anonymous_id: anonymousId
+        anonymous_id: anonymousId,
+        user_id: userId
       });
 
       if (voteError) {
         console.error('Error recording vote:', voteError);
+
+        if ((voteError as any).code === '23505') {
+          const { data: conflictVote, error: conflictError } = await supabase
+            .from('votes')
+            .select('option_index')
+            .eq('post_id', post.id)
+            .or(`user_id.eq.${userId},anonymous_id.eq.${anonymousId}`)
+            .maybeSingle();
+
+          if (!conflictError && conflictVote) {
+            const existingIndex = conflictVote.option_index ?? 0;
+            localStorage.setItem(`vote_${post.id}`, existingIndex.toString());
+            setHasVoted(true);
+            setUserVote(existingIndex);
+            alert('You have already voted on this post.');
+            return existingIndex;
+          }
+        }
+
         throw voteError;
       }
 
-      // 3. Update the post aggregates
       const { data: updatedPost, error: updateError } = await supabase
         .from('posts')
         .update({
@@ -132,7 +169,7 @@ export default function PostCard({ post }) {
       navigate('/auth', { state: { from: location } });
       return;
     }
-    voteMutation.mutateAsync(option);
+    await voteMutation.mutateAsync({ optionIndex: option, userId: user.id });
   };
 
   return (

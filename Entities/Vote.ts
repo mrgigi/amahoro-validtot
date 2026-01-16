@@ -6,6 +6,10 @@
       "type": "string",
       "description": "ID of the post being voted on"
     },
+    "user_id": {
+      "type": "string",
+      "description": "ID of the user casting the vote (if logged in)"
+    },
     "option_index": {
       "type": "number",
       "description": "Index of the option voted for (for comparison posts)"
