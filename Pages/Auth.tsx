@@ -23,6 +23,7 @@ export default function Auth() {
   const [cohort, setCohort] = useState<"1" | "2" | "">("");
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"signup" | "signin">("signin");
+  const [authRole, setAuthRole] = useState<"voter" | "admin">("voter");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -69,6 +70,7 @@ export default function Auth() {
               gender,
               country,
               cohort,
+              intended_role: authRole
             },
           },
         });
@@ -170,12 +172,38 @@ export default function Auth() {
           </div>
           <div className="font-bold">
             {mode === "signup"
-              ? "Create an account to start posting"
-              : "Sign in to continue"}
+              ? authRole === "admin"
+                ? "Sign up as an admin to create polls and see analytics"
+                : "Sign up as a voter to join campaigns and vote"
+              : authRole === "admin"
+                ? "Admin: sign in to manage polls and analytics"
+                : "Voter: sign in to see polls and vote"}
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={() => setAuthRole("voter")}
+              className={`w-full p-3 border-4 border-black font-black text-sm ${
+                authRole === "voter" ? "bg-[#00FF00]" : "bg-white"
+              }`}
+            >
+              Sign up or Login as voter
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAuthRole("admin")}
+              className={`w-full p-3 border-4 border-black font-black text-sm ${
+                authRole === "admin" ? "bg-[#FFFF00]" : "bg-white"
+              }`}
+            >
+              Sign up or Login as admin
+            </button>
+          </div>
+
           <div>
             <label className="block text-sm font-bold mb-1">Email</label>
             <input
