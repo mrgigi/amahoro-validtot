@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import CreatePost from "../Pages/CreatePost";
 import AdminDashboard from "../Pages/AdminDashboard";
+import Profile from "../Pages/Profile";
 import Feed from "../Pages/Feed";
 import Auth from "../Pages/Auth";
 import { supabase, ensureUserProfile } from "./supabaseClient";
@@ -119,6 +120,12 @@ export default function App() {
         <Route path="/admin" element={
           <ProtectedRoute>
             <AdminDashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         } />
 
