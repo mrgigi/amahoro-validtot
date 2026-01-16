@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "@/pages/Home";
 import CreatePost from "../Pages/CreatePost";
 import AdminDashboard from "../Pages/AdminDashboard";
-import { supabase } from "./supabaseClient";
+import Profile from "../Pages/Profile";
+import { supabase, ensureUserProfile } from "./supabaseClient";
 
 function AuthScreen() {
   const [email, setEmail] = useState("");
@@ -168,6 +169,20 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const syncProfile = async () => {
+      if (!user) {
+        return;
+      }
+      try {
+        await ensureUserProfile({ id: user.id });
+      } catch (error) {
+        console.error("Failed to ensure profile", error);
+      }
+    };
+    syncProfile();
+  }, [user]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
@@ -188,6 +203,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/create-post" element={<CreatePost />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );

@@ -3,7 +3,7 @@ import { supabase } from '../src/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import PostCard from '../Components/PostCard';
 import SearchFilters from '../Components/SearchFilters';
-import { Plus, Loader, Search } from 'lucide-react';
+import { Plus, Loader, Search, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
 
@@ -128,6 +128,13 @@ export default function Feed() {
             className="p-2.5 bg-[#00FF00] border-3 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
           >
             <Plus className="w-5 h-5" />
+          </Link>
+
+          <Link
+            to={createPageUrl('Profile')}
+            className="p-2.5 bg-white border-3 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
+          >
+            <User className="w-5 h-5" />
           </Link>
         </div>
       </div>

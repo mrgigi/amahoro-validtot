@@ -10,6 +10,7 @@ export function createPageUrl(page: string) {
     case 'Feed': return '/';
     case 'CreatePost': return '/create-post';
     case 'AdminDashboard': return '/admin';
+    case 'Profile': return '/profile';
     default: return '/';
   }
 }
