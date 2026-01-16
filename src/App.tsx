@@ -10,7 +10,7 @@ import { supabase, ensureUserProfile } from "./supabaseClient";
 function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signup" | "signin">("signup");
+  const [mode, setMode] = useState<"signup" | "signin">("signin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
