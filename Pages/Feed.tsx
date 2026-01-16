@@ -45,8 +45,8 @@ export default function Feed() {
     }
   }, [allPosts]);
 
-  // Filter out hidden posts
-  const posts = allPosts.filter(post => !post.is_hidden);
+  // Filter out hidden posts and remove single_review type
+  const posts = allPosts.filter(post => !post.is_hidden && post.type === 'comparison');
 
   // Filter and sort posts
   const filteredPosts = posts

@@ -36,7 +36,7 @@ export default function CreatePost() {
     if (!e.target.files || e.target.files.length === 0) return;
     
     const files = Array.from(e.target.files);
-    const maxImages = postType === 'single_review' ? 1 : 3;
+    const maxImages = 3;
     if (images.length + files.length > maxImages) {
       alert(`Maximum ${maxImages} image${maxImages > 1 ? 's' : ''} allowed!`);
       return;
@@ -95,32 +95,21 @@ export default function CreatePost() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (postType === 'comparison' && images.length < 2) {
+    if (images.length < 2) {
       alert('Please add at least 2 images for comparison');
-      return;
-    }
-    
-    if (postType === 'single_review' && images.length < 1) {
-      alert('Please add an image');
       return;
     }
 
     const postData: any = {
-      type: postType,
-      title: title || (postType === 'comparison' ? options.join(' or ') : 'Rate this'),
+      type: 'comparison',
+      title: title || options.join(' or '),
       images,
       comment_count: 0
     };
 
-    if (postType === 'comparison') {
-      postData.options = options;
-      postData.votes = new Array(images.length).fill(0);
-      postData.total_votes = 0;
-    } else {
-      postData.average_rating = 0;
-      postData.rating_count = 0;
-      postData.star_distribution = [0, 0, 0, 0, 0];
-    }
+    postData.options = options;
+    postData.votes = new Array(images.length).fill(0);
+    postData.total_votes = 0;
 
     createPostMutation.mutate(postData);
   };
@@ -140,46 +129,7 @@ export default function CreatePost() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Post Type Selection */}
-          <div>
-            <label className="block text-xl font-black mb-3 transform -rotate-1">
-              POST TYPE
-            </label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setPostType('comparison');
-                  setImages([]);
-                  setOptions([]);
-                }}
-                className={`flex-1 p-4 border-4 border-black font-black text-lg transition-all ${
-                  postType === 'comparison'
-                    ? 'bg-[#FF006E] text-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                }`}
-              >
-                COMPARISON
-                <div className="text-xs font-medium mt-1">2-3 images</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPostType('single_review');
-                  setImages([]);
-                  setOptions([]);
-                }}
-                className={`flex-1 p-4 border-4 border-black font-black text-lg transition-all ${
-                  postType === 'single_review'
-                    ? 'bg-[#FF006E] text-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-                }`}
-              >
-                SINGLE REVIEW
-                <div className="text-xs font-medium mt-1">1 image + stars</div>
-              </button>
-            </div>
-          </div>
+          {/* Post Type Selection removed - always comparison */}
 
           {/* Title */}
           <div>
@@ -204,7 +154,7 @@ export default function CreatePost() {
           {/* Image Upload */}
           <div>
             <label className="block text-xl font-black mb-2 transform rotate-1">
-              {postType === 'comparison' ? 'UPLOAD IMAGES (2-3)' : 'UPLOAD IMAGE (1)'}
+              UPLOAD IMAGES (2-3)
             </label>
             <div className="space-y-4 mb-4">
               {images.map((img, index) => {
@@ -229,7 +179,6 @@ export default function CreatePost() {
                           </button>
                           </div>
 
-                          {postType === 'comparison' && (
                           <div className="flex-1">
                           <label 
                             className={`block text-lg font-black mb-2 text-white px-3 py-1 border-4 border-black inline-block transform ${rotations[index]}`}
@@ -251,7 +200,6 @@ export default function CreatePost() {
                             </div>
                           </div>
                           </div>
-                          )}
                     </div>
                   </div>
                 );

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Share2, Flag, Eye, Check } from 'lucide-react';
 import ImageViewer from './ImageViewer';
 import VoteInterface from './VoteInterface';
-import StarRating from './StarRating';
 import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
 import { supabase } from '../src/supabaseClient';
@@ -37,49 +36,23 @@ export default function PostCard({ post }) {
   }, [post.id]);
 
   const voteMutation = useMutation({
-    mutationFn: async (optionIndexOrRating: number) => {
-      if (post.type === 'single_review') {
-        // Handle star rating
-        const rating = optionIndexOrRating;
-        await supabase.from('votes').insert({
-          post_id: post.id,
-          rating,
-          anonymous_id: anonymousId
-        });
+    mutationFn: async (optionIndex: number) => {
+      await supabase.from('votes').insert({
+        post_id: post.id,
+        option_index: optionIndex,
+        anonymous_id: anonymousId
+      });
 
-        const starDist = [...(post.star_distribution || [0, 0, 0, 0, 0])];
-        starDist[rating - 1] += 1;
-        const newRatingCount = (post.rating_count || 0) + 1;
-        const totalStars = starDist.reduce((sum: number, count: number, idx: number) => sum + count * (idx + 1), 0);
-        const newAverage = totalStars / newRatingCount;
+      const currentVotes = post.votes || new Array(post.images?.length || 3).fill(0);
+      const updatedVotes = [...currentVotes];
+      updatedVotes[optionIndex] = (updatedVotes[optionIndex] || 0) + 1;
 
-        await supabase.from('posts').update({
-          star_distribution: starDist,
-          rating_count: newRatingCount,
-          average_rating: newAverage
-        }).eq('id', post.id);
-
-        return rating;
-      } else {
-        // Handle comparison voting
-        const optionIndex = optionIndexOrRating;
-        await supabase.from('votes').insert({
-          post_id: post.id,
-          option_index: optionIndex,
-          anonymous_id: anonymousId
-        });
-
-        const currentVotes = post.votes || new Array(post.images?.length || 3).fill(0);
-        const updatedVotes = [...currentVotes];
-        updatedVotes[optionIndex] = (updatedVotes[optionIndex] || 0) + 1;
-
-        await supabase.from('posts').update({
-          votes: updatedVotes,
-          total_votes: (post.total_votes || 0) + 1
-        }).eq('id', post.id);
-        
-        return optionIndex;
-      }
+      await supabase.from('posts').update({
+        votes: updatedVotes,
+        total_votes: (post.total_votes || 0) + 1
+      }).eq('id', post.id);
+      
+      return optionIndex;
     },
     onSuccess: (value) => {
       localStorage.setItem(`vote_${post.id}`, value.toString());
@@ -174,30 +147,17 @@ export default function PostCard({ post }) {
         {/* Vote Stats - Always visible */}
         {!hasVoted && (
           <div className="mb-4 p-3 bg-white border-4 border-black font-bold text-center">
-            {post.type === 'single_review' 
-              ? `${post.rating_count || 0} rating${(post.rating_count || 0) !== 1 ? 's' : ''}`
-              : `${post.total_votes || 0} vote${(post.total_votes || 0) !== 1 ? 's' : ''}`
-            } • {post.comment_count || 0} comment{(post.comment_count || 0) !== 1 ? 's' : ''}
+            {`${post.total_votes || 0} vote${(post.total_votes || 0) !== 1 ? 's' : ''}`} • {post.comment_count || 0} comment{(post.comment_count || 0) !== 1 ? 's' : ''}
           </div>
         )}
 
         {/* Vote/Rating Interface */}
-        {post.type === 'single_review' ? (
-          <StarRating
-            postId={post.id}
-            currentRating={post.average_rating || 0}
-            onVote={(rating) => voteMutation.mutateAsync(rating)}
-            hasVoted={hasVoted}
-            userRating={userVote}
-          />
-        ) : (
-          <VoteInterface
-            post={post}
-            onVote={(option) => voteMutation.mutateAsync(option)}
-            hasVoted={hasVoted}
-            userVote={userVote}
-          />
-        )}
+        <VoteInterface
+          post={post}
+          onVote={(option) => voteMutation.mutateAsync(option)}
+          hasVoted={hasVoted}
+          userVote={userVote}
+        />
 
         {/* Share Button */}
         <button
