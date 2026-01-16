@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('Pending');
   const [activeTab, setActiveTab] = useState<'reports' | 'posts' | 'users'>('reports');
   const [accessDenied, setAccessDenied] = useState(false);
@@ -24,12 +25,21 @@ export default function AdminDashboard() {
       // Store user immediately so we can show ID even if denied
       setCurrentUser(user);
 
-      const role = await checkAdminRole(user.id);
-      if (!role) {
+      // Direct check to capture error details for debugging
+      const { data, error } = await supabase
+        .from("admins")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.error("Admin Access Error:", error, data);
+        setDebugInfo({ error, data, userId: user.id });
         setAccessDenied(true);
         return;
       }
       
+      const role = data.role as "super_admin" | "admin";
       setCurrentUser({ ...user, role });
     };
     checkAuth();
@@ -304,9 +314,17 @@ export default function AdminDashboard() {
           <Shield className="w-16 h-16 mx-auto mb-4 text-red-600" />
           <h1 className="text-3xl font-black mb-4">ACCESS DENIED</h1>
           <p className="font-bold mb-6">You do not have permission to view this page.</p>
-          <div className="mb-6 p-4 bg-gray-100 border-2 border-dashed border-gray-400">
+          <div className="mb-6 p-4 bg-gray-100 border-2 border-dashed border-gray-400 text-left max-w-md">
             <p className="text-xs font-mono text-gray-500 mb-1">Your User ID:</p>
-            <p className="font-mono font-bold select-all">{currentUser?.id || 'Loading ID...'}</p>
+            <p className="font-mono font-bold select-all mb-4">{currentUser?.id || 'Loading ID...'}</p>
+            
+            <p className="text-xs font-mono text-gray-500 mb-1">Database Response:</p>
+            <pre className="text-xs bg-gray-200 p-2 overflow-auto font-mono">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+            <p className="text-xs text-gray-500 mt-2">
+              (If data is null, the SQL Policy is blocking access or the row is missing)
+            </p>
           </div>
           <Link
             to="/"
