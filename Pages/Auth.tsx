@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { supabase } from "../src/supabaseClient";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"signup" | "signin">("signin");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +14,10 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || "/";
+  const fromState = location.state as { from?: { pathname?: string } } | null;
+  const fromPath = fromState?.from?.pathname;
+  const allowedReturnPaths = ["/create-post", "/admin"];
+  const defaultAfterLogin = "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,11 +65,35 @@ export default function Auth() {
           password,
         });
         if (error) throw error;
-        // Redirect back to where they came from
-        navigate(from, { replace: true });
+        const target =
+          fromPath && allowedReturnPaths.includes(fromPath)
+            ? fromPath
+            : defaultAfterLogin;
+        navigate(target, { replace: true });
       }
     } catch (err: any) {
       setError(err.message || "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setError(null);
+    setMessage(null);
+    if (!email) {
+      setError("Enter your email to reset your password.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        throw error;
+      }
+      setMessage("If an account exists for that email, we sent a reset link.");
+    } catch (err: any) {
+      setError(err.message || "Failed to send password reset email.");
     } finally {
       setLoading(false);
     }
@@ -97,13 +126,37 @@ export default function Auth() {
           </div>
           <div>
             <label className="block text-sm font-bold mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-              placeholder="At least 6 characters"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-3 pr-12 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                placeholder="At least 6 characters"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-0 px-3 flex items-center justify-center text-gray-700"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={handleResetPassword}
+                disabled={loading}
+                className="mt-2 text-xs font-bold underline"
+              >
+                Forgot your password?
+              </button>
+            )}
           </div>
 
           {error && (

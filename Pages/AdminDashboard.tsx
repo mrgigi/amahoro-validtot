@@ -176,10 +176,9 @@ export default function AdminDashboard() {
     queryKey: ['stats', 'top_posts'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('votes')
-        .select('post_id, count:post_id, posts(title)', { count: 'exact', head: false })
-        .group('post_id, posts(title)')
-        .order('count', { ascending: false })
+        .from('posts')
+        .select('id, title, total_votes')
+        .order('total_votes', { ascending: false })
         .limit(5);
       if (error) throw error;
       return data || [];
@@ -463,9 +462,9 @@ export default function AdminDashboard() {
               <div className="font-black text-2xl mb-3">Top Posts</div>
               <div className="space-y-2">
                 {topPosts.map((p: any) => (
-                  <div key={p.post_id} className="flex items-center justify-between p-3 border-2 border-black">
-                    <div className="font-bold truncate max-w-[70%]">{p.posts?.title || 'Untitled'}</div>
-                    <div className="font-black">{p.count || 0}</div>
+                  <div key={p.id} className="flex items-center justify-between p-3 border-2 border-black">
+                    <div className="font-bold truncate max-w-[70%]">{p.title || 'Untitled'}</div>
+                    <div className="font-black">{p.total_votes || 0}</div>
                   </div>
                 ))}
               </div>

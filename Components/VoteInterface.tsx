@@ -12,9 +12,18 @@ function VoteInterface({ post, onVote, hasVoted, userVote }: VoteInterfaceProps)
   const [isVoting, setIsVoting] = useState(false);
 
   const handleVote = async (index: number) => {
+    const confirmed = window.confirm(
+      "Are you sure? You can't change your vote after this."
+    );
+    if (!confirmed) {
+      return;
+    }
     setIsVoting(true);
-    await onVote(index);
-    setIsVoting(false);
+    try {
+      await onVote(index);
+    } finally {
+      setIsVoting(false);
+    }
   };
 
   const colors = ['#FF006E', '#0066FF', '#FFFF00'];

@@ -270,14 +270,18 @@ export default function PostCard({ post }) {
           })}
         </div>
 
-        {/* Vote Stats - Always visible */}
         {!hasVoted && (
           <div className="mb-4 p-3 bg-white border-4 border-black font-bold text-center">
             {`${post.total_votes || 0} vote${(post.total_votes || 0) !== 1 ? 's' : ''}`} • {post.comment_count || 0} comment{(post.comment_count || 0) !== 1 ? 's' : ''}
           </div>
         )}
 
-        {/* Vote/Rating Interface */}
+        {!hasVoted && (
+          <div className="mb-4 p-3 bg-black text-[#FFFF00] border-4 border-black font-black text-center text-sm md:text-base">
+            Vote once to unlock live results. Your vote cannot be changed.
+          </div>
+        )}
+
         <VoteInterface
           post={post}
           onVote={handleVoteAction}
