@@ -7,6 +7,7 @@ import ReportModal from './ReportModal';
 import { supabase } from '../src/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '../src/lib/utils';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function PostCard({ post }) {
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -16,6 +17,8 @@ export default function PostCard({ post }) {
   const [userVote, setUserVote] = useState(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Get or create anonymous ID
@@ -123,6 +126,15 @@ export default function PostCard({ post }) {
     alert('Report submitted. Thanks for keeping ValidToT safe!');
   };
 
+  const handleVoteAction = async (option: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/auth', { state: { from: location } });
+      return;
+    }
+    voteMutation.mutateAsync(option);
+  };
+
   return (
     <div className="w-full bg-[#F5F5F5]">
       <div className="max-w-2xl mx-auto p-4 pb-8 pt-4">
@@ -188,7 +200,7 @@ export default function PostCard({ post }) {
         {/* Vote/Rating Interface */}
         <VoteInterface
           post={post}
-          onVote={(option) => voteMutation.mutateAsync(option)}
+          onVote={handleVoteAction}
           hasVoted={hasVoted}
           userVote={userVote}
         />

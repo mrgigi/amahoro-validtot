@@ -1,170 +1,33 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Home from "@/pages/Home";
 import CreatePost from "../Pages/CreatePost";
 import AdminDashboard from "../Pages/AdminDashboard";
 import SuperAdminDashboard from "../Pages/SuperAdminDashboard";
 import Profile from "../Pages/Profile";
+import Feed from "../Pages/Feed";
+import Auth from "../Pages/Auth";
 import { supabase, ensureUserProfile } from "./supabaseClient";
 
-function AuthScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"signup" | "signin">("signin");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      if (!email || !password) {
-        throw new Error("Please enter an email and password.");
-      }
-
-      if (mode === "signup") {
-        // Check if user exists via RPC to bypass security obfuscation (if function exists)
-        const { data: emailExists, error: rpcError } = await supabase.rpc("email_exists", {
-          email_arg: email,
-        });
-
-        if (!rpcError && emailExists) {
-          throw new Error(
-            "An account already exists with this email. Please sign in instead."
-          );
-        }
-
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) {
-          const message = error.message || "";
-          if (
-            message.toLowerCase().includes("already registered") ||
-            message.toLowerCase().includes("already exists")
-          ) {
-            throw new Error(
-              "An account already exists with this email. Please sign in instead."
-            );
-          }
-          throw error;
-        }
-        setMessage("Check your email to confirm your account, then sign in.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-      }
-    } catch (err: any) {
-      setError(err.message || "Authentication failed");
-    } finally {
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
       setLoading(false);
-    }
-  };
+    });
+  }, []);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5] p-4">
-      <div className="w-full max-w-md bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
-        <div className="text-center mb-6">
-          <div className="text-4xl font-black mb-2 transform -rotate-2">
-            ValidToT
-          </div>
-          <div className="font-bold">
-            {mode === "signup"
-              ? "Create an account to start posting"
-              : "Sign in to continue"}
-          </div>
-        </div>
+  if (loading) return <div className="h-screen flex items-center justify-center font-black">Loading...</div>;
+  
+  if (!user) {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-              placeholder="At least 6 characters"
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 border-4 border-black bg-red-100 font-bold text-sm">
-              {error}
-            </div>
-          )}
-          {message && (
-            <div className="p-3 border-4 border-black bg-[#FFFF00] font-bold text-sm">
-              {message}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full p-3 bg-[#FF006E] text-white border-4 border-black font-black text-lg shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading
-              ? mode === "signup"
-                ? "Creating account..."
-                : "Signing in..."
-              : mode === "signup"
-              ? "Sign up"
-              : "Sign in"}
-          </button>
-        </form>
-
-        <div className="mt-4 text-center text-sm font-bold">
-          {mode === "signup" ? (
-            <>
-              Already have an account?{" "}
-              <button
-                className="underline"
-                onClick={() => {
-                  setMode("signin");
-                  setError(null);
-                  setMessage(null);
-                }}
-              >
-                Sign in
-              </button>
-            </>
-          ) : (
-            <>
-              New here?{" "}
-              <button
-                className="underline"
-                onClick={() => {
-                  setMode("signup");
-                  setError(null);
-                  setMessage(null);
-                }}
-              >
-                Create an account
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -198,54 +61,84 @@ export default function App() {
       if (!user) {
         return;
       }
+
       try {
-        const profile = await ensureUserProfile({ id: user.id });
+        const profile = await ensureUserProfile(user);
+
         if (profile?.is_banned) {
-          setBannedMessage(
-            "Your account has been suspended. Contact support if you believe this is a mistake."
-          );
+          setBannedMessage("Your account has been banned due to policy violations.");
           await supabase.auth.signOut();
+          setUser(null);
         } else {
           setBannedMessage(null);
         }
       } catch (error) {
-        console.error("Failed to ensure profile", error);
+        console.error("Error syncing profile:", error);
       }
     };
+
     syncProfile();
   }, [user]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
-        <div className="text-center">
-          <div className="text-2xl font-black">Loading...</div>
-        </div>
+        <div className="text-2xl font-black animate-pulse">Loading ValidToT...</div>
       </div>
     );
   }
 
-  if (!user) {
+  if (bannedMessage) {
     return (
-      <>
-        {bannedMessage && (
-          <div className="fixed top-0 left-0 w-full p-4 bg-red-600 text-white font-black text-center border-b-4 border-black z-50">
-            ⚠️ {bannedMessage}
-          </div>
-        )}
-        <AuthScreen />
-      </>
+      <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
+        <div className="max-w-md w-full bg-white border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+          <div className="text-6xl font-black text-red-600 mb-4">BANNED</div>
+          <p className="font-bold text-xl mb-6">{bannedMessage}</p>
+          <button
+            onClick={() => setBannedMessage(null)}
+            className="px-6 py-3 bg-black text-white font-black border-2 border-transparent hover:bg-gray-800 transition-colors"
+          >
+            I Understand
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/create-post" element={<CreatePost />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/super-admin" element={<SuperAdminDashboard />} />
+        {/* Public Routes */}
+        <Route path="/" element={<Feed />} />
+        <Route path="/auth" element={<Auth />} />
+        
+        {/* Protected Routes */}
+        <Route path="/create-post" element={
+          <ProtectedRoute>
+            <CreatePost />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/super-admin" element={
+          <ProtectedRoute>
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

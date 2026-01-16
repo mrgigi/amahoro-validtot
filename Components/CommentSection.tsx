@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Send, MessageCircle, Flag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, MessageCircle, Flag, Trash2, Edit2, X, Check } from 'lucide-react';
 import { supabase } from '../src/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ReportModal from './ReportModal';
@@ -13,15 +13,22 @@ export default function CommentSection({ post }: { post: any }) {
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(null);
   const [anonymousId, setAnonymousId] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
   const queryClient = useQueryClient();
 
-  React.useEffect(() => {
+  useEffect(() => {
     let id = localStorage.getItem('validtot_anon_id');
     if (!id) {
       id = 'anon_' + Math.random().toString(36).substring(2, 15);
       localStorage.setItem('validtot_anon_id', id);
     }
     setAnonymousId(id);
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+    });
   }, []);
 
   const { data: comments = [] } = useQuery({
@@ -42,17 +49,18 @@ export default function CommentSection({ post }: { post: any }) {
 
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      // 1. Get current user's profile username
       const { data: { user } } = await supabase.auth.getUser();
       let authorName = ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
+      let userId = null;
 
       if (user) {
+        userId = user.id;
         const { data: profile } = await supabase
           .from('profiles')
           .select('username')
           .eq('id', user.id)
           .single();
-        
+      
         if (profile?.username) {
           authorName = profile.username;
         }
@@ -61,12 +69,12 @@ export default function CommentSection({ post }: { post: any }) {
       const { error: commentError } = await supabase.from('comments').insert({
         post_id: postId,
         content,
-        anonymous_name: authorName
+        anonymous_name: authorName,
+        user_id: userId
       });
 
       if (commentError) throw commentError;
 
-      // Increment comment count
       const { data: updatedPost, error: updateError } = await supabase
         .from('posts')
         .update({
@@ -77,19 +85,52 @@ export default function CommentSection({ post }: { post: any }) {
         .single();
 
       if (updateError) throw updateError;
-      
-      if (!updatedPost) {
-        throw new Error('Post update failed - check permissions');
-      }
-    },
-    onError: (error) => {
-      console.error('Error adding comment:', error);
-      alert('Failed to add comment. Please try again.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       setNewComment('');
+    }
+  });
+
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ id, content }: { id: string, content: string }) => {
+      const { error } = await supabase
+        .from('comments')
+        .update({ content })
+        .eq('id', id)
+        .eq('user_id', currentUser?.id); // Ensure ownership
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      setEditingCommentId(null);
+      setEditContent('');
+    }
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUser?.id); // Ensure ownership
+
+      if (error) throw error;
+
+      // Update post comment count
+      await supabase
+        .from('posts')
+        .update({
+          comment_count: Math.max((post.comment_count || 1) - 1, 0)
+        })
+        .eq('id', postId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     }
   });
 
@@ -152,17 +193,76 @@ export default function CommentSection({ post }: { post: any }) {
               <div key={comment.id} className="bg-white border-4 border-black p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <div className="flex justify-between items-start mb-1">
                   <div className="font-black text-sm">{comment.anonymous_name}</div>
-                  <button
-                    onClick={() => {
-                      setReportingCommentId(comment.id);
-                      setReportModalOpen(true);
-                    }}
-                    className="text-gray-400 hover:text-red-500"
-                  >
-                    <Flag className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {currentUser && comment.user_id === currentUser.id && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingCommentId(comment.id);
+                            setEditContent(comment.content);
+                          }}
+                          className="text-gray-400 hover:text-blue-500"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to delete this comment?')) {
+                              deleteCommentMutation.mutate(comment.id);
+                            }
+                          }}
+                          className="text-gray-400 hover:text-red-500"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => {
+                        setReportingCommentId(comment.id);
+                        setReportModalOpen(true);
+                      }}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <Flag className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="font-bold text-lg leading-snug">{comment.content}</div>
+
+                {editingCommentId === comment.id ? (
+                  <div className="mt-2">
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="w-full p-2 border-2 border-black font-medium bg-white text-sm focus:outline-none focus:bg-[#FFFF00] transition-colors mb-2"
+                      rows={2}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingCommentId(null);
+                          setEditContent('');
+                        }}
+                        className="p-1 bg-gray-200 border-2 border-black hover:bg-gray-300"
+                        title="Cancel"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => editCommentMutation.mutate({ id: comment.id, content: editContent })}
+                        className="p-1 bg-[#FFFF00] border-2 border-black hover:bg-[#F0F000]"
+                        title="Save"
+                        disabled={!editContent.trim()}
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="font-bold text-lg leading-snug">{comment.content}</div>
+                )}
                 <div className="mt-2 text-xs text-gray-500 font-bold">
                   {new Date(comment.created_at || Date.now()).toLocaleDateString()}
                 </div>
