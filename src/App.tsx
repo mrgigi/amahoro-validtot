@@ -27,6 +27,17 @@ function AuthScreen() {
       }
 
       if (mode === "signup") {
+        // Check if user exists via RPC to bypass security obfuscation (if function exists)
+        const { data: emailExists, error: rpcError } = await supabase.rpc("email_exists", {
+          email_arg: email,
+        });
+
+        if (!rpcError && emailExists) {
+          throw new Error(
+            "An account already exists with this email. Please sign in instead."
+          );
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
