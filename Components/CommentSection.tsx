@@ -44,16 +44,24 @@ export default function CommentSection({ post }: { post: any }) {
     mutationFn: async (content: string) => {
       const anonName = ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
       
-      await supabase.from('comments').insert({
+      const { error: commentError } = await supabase.from('comments').insert({
         post_id: postId,
         content,
         anonymous_name: anonName
       });
 
+      if (commentError) throw commentError;
+
       // Increment comment count
-      await supabase.from('posts').update({
+      const { error: updateError } = await supabase.from('posts').update({
         comment_count: (post.comment_count || 0) + 1
       }).eq('id', postId);
+
+      if (updateError) throw updateError;
+    },
+    onError: (error) => {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment. Please try again.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });

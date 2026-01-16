@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../src/supabaseClient";
-import { ArrowLeft, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowLeft, User, LogOut } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "../src/lib/utils";
 
 type ProfileRow = {
@@ -14,6 +14,12 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -106,6 +112,14 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="w-full mt-6 p-4 bg-[#FF0000] text-white border-4 border-black font-black text-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2"
+        >
+          <LogOut className="w-6 h-6" />
+          LOG OUT
+        </button>
       </div>
     </div>
   );
