@@ -9,6 +9,9 @@ type ProfileRow = {
   id: string;
   username: string;
   created_at: string;
+  gender?: string | null;
+  country?: string | null;
+  cohort?: string | null;
 };
 
 export default function Profile() {
@@ -37,7 +40,7 @@ export default function Profile() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, created_at")
+        .select("id, username, created_at, gender, country, cohort")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -139,6 +142,26 @@ export default function Profile() {
             <div className="text-sm font-bold text-gray-600">Joined</div>
             <div className="font-bold">
               {new Date(profile.created_at).toLocaleString()}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm font-bold text-gray-600">Gender</div>
+              <div className="font-bold">
+                {profile.gender || "Not set"}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-bold text-gray-600">Country</div>
+              <div className="font-bold">
+                {profile.country || "Not set"}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-bold text-gray-600">Cohort</div>
+              <div className="font-bold">
+                {profile.cohort || "Not set"}
+              </div>
             </div>
           </div>
         </div>

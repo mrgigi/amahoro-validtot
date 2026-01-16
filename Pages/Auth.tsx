@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "../src/supabaseClient";
+import { supabase, checkAdminRole } from "../src/supabaseClient";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -110,11 +110,20 @@ export default function Auth() {
           }
           throw error;
         }
-        const target =
-          fromPath && allowedReturnPaths.includes(fromPath)
-            ? fromPath
-            : defaultAfterLogin;
-        navigate(target, { replace: true });
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          const role = await checkAdminRole(user.id);
+          if (role) {
+            navigate("/admin", { replace: true });
+            return;
+          }
+        }
+
+        navigate(defaultAfterLogin, { replace: true });
       }
     } catch (err: any) {
       setError(err.message || "Authentication failed");

@@ -56,16 +56,43 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
     .eq("id", user.id)
     .maybeSingle();
 
-  if (existing) {
-    return existing;
-  }
-
   const username = generateRandomUsername();
 
   const metadata = (user as any).user_metadata || {};
   const gender = metadata.gender ?? null;
   const country = metadata.country ?? null;
   const cohort = metadata.cohort ?? null;
+
+  if (existing) {
+    const needsUpdate =
+      (!existing.gender && gender) ||
+      (!existing.country && country) ||
+      (!existing.cohort && cohort);
+
+    if (needsUpdate) {
+      const updates: any = {};
+      if (!existing.gender && gender) updates.gender = gender;
+      if (!existing.country && country) updates.country = country;
+      if (!existing.cohort && cohort) updates.cohort = cohort;
+
+      const { data: updated, error: updateError } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", user.id)
+        .select("id, username, created_at, is_banned, gender, country, cohort")
+        .maybeSingle();
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      if (updated) {
+        return updated;
+      }
+    }
+
+    return existing;
+  }
 
   const { data, error } = await supabase
     .from("profiles")
