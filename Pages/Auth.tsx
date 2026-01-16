@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../src/supabaseClient";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function Auth() {
@@ -215,6 +215,12 @@ export default function Auth() {
               </button>
             </>
           )}
+        </div>
+
+        <div className="mt-3 text-center text-xs font-bold">
+          <Link to="/" className="underline">
+            Go to home
+          </Link>
         </div>
       </div>
     </div>
