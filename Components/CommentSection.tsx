@@ -67,11 +67,20 @@ export default function CommentSection({ post }: { post: any }) {
       if (commentError) throw commentError;
 
       // Increment comment count
-      const { error: updateError } = await supabase.from('posts').update({
-        comment_count: (post.comment_count || 0) + 1
-      }).eq('id', postId);
+      const { data: updatedPost, error: updateError } = await supabase
+        .from('posts')
+        .update({
+          comment_count: (post.comment_count || 0) + 1
+        })
+        .eq('id', postId)
+        .select()
+        .single();
 
       if (updateError) throw updateError;
+      
+      if (!updatedPost) {
+        throw new Error('Post update failed - check permissions');
+      }
     },
     onError: (error) => {
       console.error('Error adding comment:', error);

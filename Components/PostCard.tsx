@@ -63,14 +63,23 @@ export default function PostCard({ post }) {
       }
 
       // 3. Update the post aggregates
-      const { error: updateError } = await supabase.from('posts').update({
-        votes: currentVotes,
-        total_votes: newTotal
-      }).eq('id', post.id);
+      const { data: updatedPost, error: updateError } = await supabase
+        .from('posts')
+        .update({
+          votes: currentVotes,
+          total_votes: newTotal
+        })
+        .eq('id', post.id)
+        .select()
+        .single();
       
       if (updateError) {
         console.error('Error updating post stats:', updateError);
         throw updateError;
+      }
+
+      if (!updatedPost) {
+        throw new Error('Post update failed - check permissions');
       }
       
       return optionIndex;
