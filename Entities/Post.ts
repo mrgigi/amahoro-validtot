@@ -47,6 +47,10 @@
       "default": 0,
       "description": "Number of comments"
     },
+    "created_by": {
+      "type": "string",
+      "description": "ID of the user who created the post"
+    },
     "is_hidden": {
       "type": "boolean",
       "default": false,

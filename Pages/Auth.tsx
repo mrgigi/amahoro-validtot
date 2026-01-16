@@ -3,6 +3,18 @@ import { supabase } from "../src/supabaseClient";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
+const COUNTRY_OPTIONS = [
+  "South Africa",
+  "Kenya",
+  "Nigeria",
+  "Rwanda",
+  "Uganda",
+  "Ghana",
+  "United Kingdom",
+  "United States",
+  "Other"
+];
+
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -232,13 +244,18 @@ export default function Auth() {
 
               <div>
                 <label className="block text-sm font-bold mb-1">Country</label>
-                <input
-                  type="text"
+                <select
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
                   className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                  placeholder="e.g. South Africa"
-                />
+                >
+                  <option value="">Select a country</option>
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

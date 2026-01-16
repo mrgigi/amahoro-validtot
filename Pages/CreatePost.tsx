@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../src/supabaseClient';
+import { supabase, checkAdminRole } from '../src/supabaseClient';
 import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Upload, X, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -89,7 +89,7 @@ export default function CreatePost() {
     setOptions(newOptions);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (images.length < 2) {
@@ -97,11 +97,29 @@ export default function CreatePost() {
       return;
     }
 
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      navigate('/auth', { replace: true });
+      return;
+    }
+
+    const role = await checkAdminRole(user.id);
+
+    if (!role) {
+      alert('Only admins can create posts.');
+      navigate('/', { replace: true });
+      return;
+    }
+
     const postData: any = {
       type: 'comparison',
       title: title || options.join(' or '),
       images,
-      comment_count: 0
+      comment_count: 0,
+      created_by: user.id
     };
 
     postData.options = options;
