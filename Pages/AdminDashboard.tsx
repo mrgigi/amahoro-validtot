@@ -20,6 +20,9 @@ export default function AdminDashboard() {
         navigate('/');
         return;
       }
+      
+      // Store user immediately so we can show ID even if denied
+      setCurrentUser(user);
 
       const role = await checkAdminRole(user.id);
       if (!role) {
@@ -301,6 +304,10 @@ export default function AdminDashboard() {
           <Shield className="w-16 h-16 mx-auto mb-4 text-red-600" />
           <h1 className="text-3xl font-black mb-4">ACCESS DENIED</h1>
           <p className="font-bold mb-6">You do not have permission to view this page.</p>
+          <div className="mb-6 p-4 bg-gray-100 border-2 border-dashed border-gray-400">
+            <p className="text-xs font-mono text-gray-500 mb-1">Your User ID:</p>
+            <p className="font-mono font-bold select-all">{currentUser?.id || 'Loading ID...'}</p>
+          </div>
           <Link
             to="/"
             className="inline-block px-6 py-3 bg-[#FF006E] text-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
