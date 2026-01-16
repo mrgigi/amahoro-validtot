@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Send, MessageCircle, Flag, Trash2, Edit2, X, Check } from 'lucide-react';
 import { supabase } from '../src/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ReportModal from './ReportModal';
 
 const ANON_NAMES = ['Anon Owl', 'Mystery Duck', 'Secret Cat', 'Hidden Bear', 'Ghost Fox', 'Shadow Deer', 'Ninja Panda', 'Stealth Wolf'];
@@ -17,6 +18,8 @@ export default function CommentSection({ post }: { post: any }) {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     let id = localStorage.getItem('validtot_anon_id');
@@ -48,22 +51,17 @@ export default function CommentSection({ post }: { post: any }) {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async ({ content, userId }: { content: string; userId: string }) => {
       let authorName = ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
-      let userId = null;
 
-      if (user) {
-        userId = user.id;
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single();
-      
-        if (profile?.username) {
-          authorName = profile.username;
-        }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single();
+    
+      if (profile?.username) {
+        authorName = profile.username;
       }
       
       const { error: commentError } = await supabase.from('comments').insert({
@@ -75,14 +73,12 @@ export default function CommentSection({ post }: { post: any }) {
 
       if (commentError) throw commentError;
 
-      const { data: updatedPost, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('posts')
         .update({
           comment_count: (post.comment_count || 0) + 1
         })
-        .eq('id', postId)
-        .select()
-        .single();
+        .eq('id', postId);
 
       if (updateError) throw updateError;
     },
@@ -134,11 +130,20 @@ export default function CommentSection({ post }: { post: any }) {
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newComment.trim() && newComment.length <= 140) {
-      addCommentMutation.mutate(newComment.trim());
+    const trimmed = newComment.trim();
+    if (!trimmed || trimmed.length > 140) {
+      return;
     }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/auth', { state: { from: location } });
+      return;
+    }
+
+    addCommentMutation.mutate({ content: trimmed, userId: user.id });
   };
 
   const handleReportComment = async (reason: string, details?: string) => {

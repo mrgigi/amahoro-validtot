@@ -21,21 +21,64 @@ export default function PostCard({ post }) {
   const location = useLocation();
 
   useEffect(() => {
-    // Get or create anonymous ID
-    let id = localStorage.getItem('validtot_anon_id');
-    if (!id) {
-      id = 'anon_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('validtot_anon_id', id);
-    }
-    setAnonymousId(id);
+    let isMounted = true;
 
-    // Check if user has already voted
-    const voteKey = `vote_${post.id}`;
-    const existingVote = localStorage.getItem(voteKey);
-    if (existingVote) {
-      setHasVoted(true);
-      setUserVote(parseInt(existingVote));
-    }
+    const init = async () => {
+      let id = localStorage.getItem('validtot_anon_id');
+      if (!id) {
+        id = 'anon_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('validtot_anon_id', id);
+      }
+      if (!isMounted) return;
+      setAnonymousId(id);
+
+      const voteKey = `vote_${post.id}`;
+      const existingVote = localStorage.getItem(voteKey);
+      if (existingVote) {
+        if (!isMounted) return;
+        setHasVoted(true);
+        setUserVote(parseInt(existingVote));
+        return;
+      }
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        let query = supabase
+          .from('votes')
+          .select('option_index')
+          .eq('post_id', post.id);
+
+        if (user) {
+          query = query.or(`user_id.eq.${user.id},anonymous_id.eq.${id}`);
+        } else {
+          query = query.eq('anonymous_id', id);
+        }
+
+        const { data: remoteVote, error } = await query.maybeSingle();
+
+        if (error) {
+          console.error('Error preloading vote:', error);
+          return;
+        }
+
+        if (remoteVote && typeof remoteVote.option_index === 'number') {
+          const index = remoteVote.option_index;
+          if (!isMounted) return;
+          localStorage.setItem(voteKey, index.toString());
+          setHasVoted(true);
+          setUserVote(index);
+        }
+      } catch (error) {
+        console.error('Error preloading vote:', error);
+      }
+    };
+
+    init();
+
+    return () => {
+      isMounted = false;
+    };
   }, [post.id]);
 
   const voteMutation = useMutation({
