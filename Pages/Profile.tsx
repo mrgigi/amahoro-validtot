@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../src/supabaseClient";
-import { ArrowLeft, User, LogOut } from "lucide-react";
+import { ArrowLeft, User, LogOut, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { createPageUrl } from "../src/lib/utils";
 
 type ProfileRow = {
@@ -49,6 +50,35 @@ export default function Profile() {
 
     load();
   }, []);
+
+  const { data: votes = [], isLoading: votesLoading } = useQuery({
+    queryKey: ["my_votes"],
+    queryFn: async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("votes")
+        .select(
+          "id, post_id, option_index, created_at, post:posts(id, title, options)"
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("Error loading vote history:", error);
+        throw error;
+      }
+
+      return data || [];
+    }
+  });
 
   if (loading) {
     return (
@@ -113,6 +143,60 @@ export default function Profile() {
           </div>
         </div>
 
+        <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5" />
+            <h2 className="text-xl font-black">Your recent votes</h2>
+          </div>
+
+          {votesLoading ? (
+            <div className="text-sm font-bold text-gray-500">
+              Loading your votes...
+            </div>
+          ) : votes.length === 0 ? (
+            <div className="text-sm font-bold text-gray-500">
+              You haven&apos;t voted on any posts yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {votes.map((vote: any) => {
+                const post = vote.post;
+                const options = post?.options || [];
+                const index =
+                  typeof vote.option_index === "number"
+                    ? vote.option_index
+                    : 0;
+                const choiceLabel =
+                  options[index] !== undefined
+                    ? options[index]
+                    : `Option #${index + 1}`;
+                const timestamp = vote.created_at
+                  ? new Date(vote.created_at).toLocaleString()
+                  : "Unknown time";
+
+                return (
+                  <Link
+                    key={vote.id}
+                    to={createPageUrl("Post", vote.post_id)}
+                    className="block border-2 border-black p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-black text-sm mb-1">
+                      {post?.title || "Untitled post"}
+                    </div>
+                    <div className="text-sm font-bold text-gray-700">
+                      You voted for:{" "}
+                      <span className="font-black">{choiceLabel}</span>
+                    </div>
+                    <div className="text-xs font-bold text-gray-500 mt-1">
+                      {timestamp}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <button
           onClick={handleLogout}
           className="w-full mt-6 p-4 bg-[#FF0000] text-white border-4 border-black font-black text-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2"
@@ -124,4 +208,3 @@ export default function Profile() {
     </div>
   );
 }
-

@@ -78,12 +78,12 @@ export async function ensureUserProfile(user: { id: string }) {
   return data;
 }
 
-export async function checkAdminRole(userId: string): Promise<"super_admin" | "admin" | null> {
+export async function checkAdminRole(userId: string): Promise<"admin" | null> {
   const { data, error } = await supabase
     .from("admins")
     .select("role")
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) return null;
-  return data.role as "super_admin" | "admin";
+  return data.role as "admin";
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, checkAdminRole } from '../src/supabaseClient';
+import { supabase } from '../src/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3, FileText, Users, UserX, UserCheck } from 'lucide-react';
 import { createPageUrl } from '../src/lib/utils';
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
         return;
       }
       
-      const role = data.role as "super_admin" | "admin";
+      const role = data.role || "admin";
       setCurrentUser({ ...user, role });
     };
     checkAuth();
@@ -56,7 +56,38 @@ export default function AdminDashboard() {
       
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+
+      const baseReports = (data || []) as any[];
+
+      const postIds = Array.from(
+        new Set(
+          baseReports
+            .filter((r) => r.reported_item_type === 'Post')
+            .map((r) => r.reported_item_id)
+        )
+      );
+
+      if (postIds.length === 0) {
+        return baseReports;
+      }
+
+      const { data: posts, error: postsError } = await supabase
+        .from('posts')
+        .select('id, title, created_at')
+        .in('id', postIds);
+
+      if (postsError) throw postsError;
+
+      const postMap = new Map(
+        (posts || []).map((p: any) => [p.id, p])
+      );
+
+      return baseReports.map((report) => ({
+        ...report,
+        post: report.reported_item_type === 'Post'
+          ? postMap.get(report.reported_item_id) || null
+          : null
+      }));
     },
     enabled: !!currentUser && activeTab === 'reports'
   });
@@ -375,14 +406,6 @@ export default function AdminDashboard() {
               <h1 className="text-4xl font-black transform -rotate-1">ADMIN DASHBOARD</h1>
             </div>
           </div>
-          {currentUser?.role === 'super_admin' && (
-            <Link
-              to="/super-admin"
-              className="px-4 py-2 bg-purple-600 text-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all text-sm"
-            >
-              SUPER ADMIN PANEL
-            </Link>
-          )}
         </div>
 
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -483,8 +506,13 @@ export default function AdminDashboard() {
                             {report.status}
                           </span>
                         </div>
+                        {report.post && (
+                          <div className="text-sm font-bold text-gray-600 mb-1">
+                            Post: {report.post.title || 'Untitled Post'}
+                          </div>
+                        )}
                         <div className="text-sm font-bold text-gray-600 mb-1">
-                          Reported: {new Date(report.created_date).toLocaleString()}
+                          Reported: {new Date(report.created_at || report.created_date).toLocaleString()}
                         </div>
                         <div className="text-sm font-bold text-gray-600">
                           Reporter ID: {report.reporter_anonymous_id}
