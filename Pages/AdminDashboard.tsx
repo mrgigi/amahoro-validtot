@@ -9,6 +9,7 @@ export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('Pending');
   const [activeTab, setActiveTab] = useState<'reports' | 'posts' | 'users'>('reports');
+  const [accessDenied, setAccessDenied] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -22,7 +23,7 @@ export default function AdminDashboard() {
 
       const role = await checkAdminRole(user.id);
       if (!role) {
-        navigate('/');
+        setAccessDenied(true);
         return;
       }
       
@@ -292,6 +293,24 @@ export default function AdminDashboard() {
       alert('Failed to update user status. Please check database permissions.');
     }
   };
+
+  if (accessDenied) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#F5F5F5]">
+        <div className="text-center p-8 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <Shield className="w-16 h-16 mx-auto mb-4 text-red-600" />
+          <h1 className="text-3xl font-black mb-4">ACCESS DENIED</h1>
+          <p className="font-bold mb-6">You do not have permission to view this page.</p>
+          <Link
+            to="/"
+            className="inline-block px-6 py-3 bg-[#FF006E] text-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+          >
+            GO HOME
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return (
