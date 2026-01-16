@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../src/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, Zap } from 'lucide-react';
+import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
 
@@ -36,20 +36,7 @@ export default function AdminDashboard() {
     enabled: !!currentUser
   });
 
-  const { data: ghostProtocolSettings = [] } = useQuery({
-    queryKey: ['settings', 'ghost_protocol'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('setting_key', 'ghost_protocol_active');
-      if (error) return []; // Fail silently for settings
-      return data || [];
-    },
-    enabled: !!currentUser
-  });
-
-  const isGhostProtocolActive = ghostProtocolSettings[0]?.setting_value === true;
+  
 
   const updateReportMutation = useMutation({
     mutationFn: async ({ reportId, data }: { reportId: any, data: any }) => {
@@ -139,30 +126,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const toggleGhostProtocolMutation = useMutation({
-    mutationFn: async (newValue: boolean) => {
-      const existing = ghostProtocolSettings[0];
-      if (existing) {
-        await supabase.from('settings').update({ setting_value: newValue }).eq('id', existing.id);
-      } else {
-        await supabase.from('settings').insert({
-          setting_key: 'ghost_protocol_active',
-          setting_value: newValue
-        });
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings', 'ghost_protocol'] });
-    }
-  });
-
-  const handleToggleGhostProtocol = async () => {
-    const newValue = !isGhostProtocolActive;
-    const action = newValue ? 'activate' : 'deactivate';
-    if (confirm(`Are you sure you want to ${action} Ghost Protocol?\n\n${newValue ? '🤖 AI will generate 5-10 comments and 50-1000 votes for each new post.' : '⚠️ AI generation will stop for new posts.'}`)) {
-      await toggleGhostProtocolMutation.mutateAsync(newValue);
-    }
-  };
+  
 
   if (!currentUser) {
     return (
@@ -204,34 +168,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Ghost Protocol Toggle */}
-        <div className="mb-6 p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Zap className={`w-6 h-6 ${isGhostProtocolActive ? 'text-yellow-500' : 'text-gray-400'}`} />
-                <h2 className="text-2xl font-black">GHOST PROTOCOL</h2>
-                <span className={`px-3 py-1 border-2 border-black font-black text-sm ${
-                  isGhostProtocolActive ? 'bg-[#00FF00]' : 'bg-gray-300'
-                }`}>
-                  {isGhostProtocolActive ? 'ACTIVE' : 'INACTIVE'}
-                </span>
-              </div>
-              <p className="font-medium text-gray-600">
-                AI generates 5-10 comments and 50-1000 votes for each new post
-              </p>
-            </div>
-            <button
-              onClick={handleToggleGhostProtocol}
-              disabled={toggleGhostProtocolMutation.isPending}
-              className={`px-6 py-3 border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all ${
-                isGhostProtocolActive ? 'bg-red-500 text-white' : 'bg-[#00FF00]'
-              }`}
-            >
-              {isGhostProtocolActive ? 'DEACTIVATE' : 'ACTIVATE'}
-            </button>
-          </div>
-        </div>
+        
 
         {/* Filter Tabs */}
         <div className="flex gap-3 mb-6 flex-wrap">

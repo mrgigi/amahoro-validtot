@@ -4,7 +4,6 @@ import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Upload, X, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
-import { executeGhostProtocol } from '../Components/GhostProtocol';
 
 export default function CreatePost() {
   const navigate = useNavigate();
@@ -25,9 +24,7 @@ export default function CreatePost() {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (createdPost) => {
-      // Execute Ghost Protocol if active
-      await executeGhostProtocol(createdPost);
+    onSuccess: async (_createdPost) => {
       navigate(createPageUrl('Feed'));
     }
   });
