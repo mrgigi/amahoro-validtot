@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../src/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3 } from 'lucide-react';
+import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3, FileText, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('Pending');
+  const [activeTab, setActiveTab] = useState<'reports' | 'posts'>('reports');
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -33,7 +34,21 @@ export default function AdminDashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!currentUser
+    enabled: !!currentUser && activeTab === 'reports'
+  });
+
+  const { data: allPosts = [], isLoading: isLoadingPosts } = useQuery({
+    queryKey: ['all_posts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentUser && activeTab === 'posts'
   });
 
   // Analytics queries
@@ -101,6 +116,8 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['all_posts'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     }
   });
 
@@ -115,6 +132,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['all_posts'] });
     }
   });
 
@@ -129,53 +147,88 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['all_posts'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
     }
   });
 
   const handleHideContent = async (report: any, hide: boolean) => {
-    if (confirm(`Are you sure you want to ${hide ? 'hide' : 'unhide'} this ${report.reported_item_type.toLowerCase()}?`)) {
-      await hideContentMutation.mutateAsync({
-        itemType: report.reported_item_type,
-        itemId: report.reported_item_id,
-        isHidden: hide
-      });
-      await updateReportMutation.mutateAsync({
-        reportId: report.id,
-        data: {
-          status: 'Reviewed',
-          reviewed_by_admin_email: currentUser.email,
-          review_notes: hide ? 'Content hidden' : 'Content unhidden'
-        }
-      });
+    try {
+      if (confirm(`Are you sure you want to ${hide ? 'hide' : 'unhide'} this ${report.reported_item_type.toLowerCase()}?`)) {
+        await hideContentMutation.mutateAsync({
+          itemType: report.reported_item_type,
+          itemId: report.reported_item_id,
+          isHidden: hide
+        });
+        await updateReportMutation.mutateAsync({
+          reportId: report.id,
+          data: {
+            status: 'Reviewed',
+            reviewed_by_admin_email: currentUser.email,
+            review_notes: hide ? 'Content hidden' : 'Content unhidden'
+          }
+        });
+        alert('Content hidden and report updated.');
+      }
+    } catch (error) {
+      console.error('Error hiding content:', error);
+      alert('Failed to hide content. Please check database permissions.');
     }
   };
 
   const handleDeleteContent = async (report: any) => {
-    if (confirm('⚠️ PERMANENT DELETE - This action cannot be undone. Are you sure?')) {
-      await deleteContentMutation.mutateAsync({
-        itemType: report.reported_item_type,
-        itemId: report.reported_item_id
-      });
-      await updateReportMutation.mutateAsync({
-        reportId: report.id,
-        data: {
-          status: 'Resolved',
-          reviewed_by_admin_email: currentUser.email,
-          review_notes: 'Content permanently deleted'
-        }
-      });
+    try {
+      if (confirm('⚠️ PERMANENT DELETE - This action cannot be undone. Are you sure?')) {
+        await deleteContentMutation.mutateAsync({
+          itemType: report.reported_item_type,
+          itemId: report.reported_item_id
+        });
+        await updateReportMutation.mutateAsync({
+          reportId: report.id,
+          data: {
+            status: 'Resolved',
+            reviewed_by_admin_email: currentUser.email,
+            review_notes: 'Content permanently deleted'
+          }
+        });
+        alert('Content deleted and report resolved.');
+      }
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      alert('Failed to delete content. Please check database permissions.');
     }
   };
 
   const handleDismiss = async (report: any) => {
-    if (confirm('Dismiss this report as invalid?')) {
-      await updateReportMutation.mutateAsync({
-        reportId: report.id,
-        data: {
-          status: 'Dismissed',
-          reviewed_by_admin_email: currentUser.email
-        }
-      });
+    try {
+      if (confirm('Dismiss this report as invalid?')) {
+        await updateReportMutation.mutateAsync({
+          reportId: report.id,
+          data: {
+            status: 'Dismissed',
+            reviewed_by_admin_email: currentUser.email
+          }
+        });
+        alert('Report dismissed.');
+      }
+    } catch (error) {
+      console.error('Error dismissing report:', error);
+      alert('Failed to dismiss report. Please check database permissions.');
+    }
+  };
+
+  const handleDeletePostDirectly = async (postId: string) => {
+    try {
+      if (confirm('⚠️ Are you sure you want to delete this post? This cannot be undone.')) {
+        await deleteContentMutation.mutateAsync({
+          itemType: 'Post',
+          itemId: postId
+        });
+        alert('Post deleted successfully.');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      alert('Failed to delete post. Please check database permissions.');
     }
   };
 
@@ -228,135 +281,195 @@ export default function AdminDashboard() {
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{pendingReportsCount}</div><div className="font-bold ml-auto">Pending Reports</div></div>
         </div>
 
-        <div className="mb-6 p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-          <div className="font-black text-2xl mb-3">Top Posts</div>
-          <div className="space-y-2">
-            {topPosts.map((p: any) => (
-              <div key={p.id} className="flex items-center justify-between p-3 border-2 border-black">
-                <div className="font-bold truncate max-w-[70%]">{p.title || 'Untitled'}</div>
-                <div className="font-black">{p.total_votes || 0}</div>
+        {/* View Tabs */}
+        <div className="flex gap-4 mb-8 border-b-4 border-black pb-1">
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all ${
+              activeTab === 'reports'
+                ? 'bg-black text-white translate-y-[4px]'
+                : 'bg-transparent text-black hover:bg-gray-200'
+            }`}
+          >
+            <Shield className="w-5 h-5" />
+            Reports Management
+          </button>
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all ${
+              activeTab === 'posts'
+                ? 'bg-black text-white translate-y-[4px]'
+                : 'bg-transparent text-black hover:bg-gray-200'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            All Posts Management
+          </button>
+        </div>
+
+        {activeTab === 'reports' ? (
+          <>
+            <div className="mb-6 p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+              <div className="font-black text-2xl mb-3">Top Posts</div>
+              <div className="space-y-2">
+                {topPosts.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between p-3 border-2 border-black">
+                    <div className="font-bold truncate max-w-[70%]">{p.title || 'Untitled'}</div>
+                    <div className="font-black">{p.total_votes || 0}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-3 mb-6 flex-wrap">
-          {['All', 'Pending', 'Reviewed', 'Resolved', 'Dismissed'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`px-6 py-3 border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all ${
-                filterStatus === status
-                  ? 'bg-[#FF006E] text-white'
-                  : 'bg-white hover:translate-x-[-2px] hover:translate-y-[-2px]'
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
+            {/* Filter Tabs */}
+            <div className="flex gap-3 mb-6 flex-wrap">
+              {['All', 'Pending', 'Reviewed', 'Resolved', 'Dismissed'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`px-6 py-3 border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                    filterStatus === status
+                      ? 'bg-[#FF006E] text-white'
+                      : 'bg-white hover:translate-x-[-2px] hover:translate-y-[-2px]'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
 
-        {/* Reports List */}
-        {reports.length === 0 ? (
-          <div className="text-center py-12">
-            <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <div className="text-2xl font-black text-gray-600">No {filterStatus.toLowerCase()} reports</div>
-          </div>
+            {/* Reports List */}
+            {reports.length === 0 ? (
+              <div className="text-center py-12">
+                <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <div className="text-2xl font-black text-gray-600">No {filterStatus.toLowerCase()} reports</div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reports.map((report: any) => (
+                  <div
+                    key={report.id}
+                    className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="px-3 py-1 bg-[#FF006E] text-white border-2 border-black font-black text-sm">
+                            {report.reported_item_type}
+                          </span>
+                          <span className="px-3 py-1 bg-[#FFFF00] border-2 border-black font-black text-sm">
+                            {report.status}
+                          </span>
+                        </div>
+                        <div className="text-sm font-bold text-gray-600 mb-1">
+                          Reported: {new Date(report.created_date).toLocaleString()}
+                        </div>
+                        <div className="text-sm font-bold text-gray-600">
+                          Reporter ID: {report.reporter_anonymous_id}
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-gray-600">
+                        Report ID: {report.id.substring(0, 8)}...
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="font-black text-lg mb-2 text-red-600">{report.reason}</div>
+                      {report.details && (
+                        <div className="p-3 bg-gray-50 border-2 border-gray-300 font-medium">
+                          {report.details}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 pt-4 border-t-2 border-gray-200">
+                      <Link 
+                        to={createPageUrl('Post', report.reported_item_id)} 
+                        target="_blank"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 border-2 border-black font-bold hover:bg-blue-200"
+                      >
+                        <Eye className="w-4 h-4" /> View Content
+                      </Link>
+                      
+                      {report.status === 'Pending' && (
+                        <>
+                          <button
+                            onClick={() => handleHideContent(report, true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-100 border-2 border-black font-bold hover:bg-orange-200"
+                          >
+                            <EyeOff className="w-4 h-4" /> Hide Content
+                          </button>
+                          
+                          <button
+                            onClick={() => handleDeleteContent(report)}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-100 border-2 border-black font-bold hover:bg-red-200 text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete Permanently
+                          </button>
+
+                          <button
+                            onClick={() => handleDismiss(report)}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-black font-bold hover:bg-green-200"
+                          >
+                            <Check className="w-4 h-4" /> Dismiss Report
+                          </button>
+                        </>
+                      )}
+                      
+                      {report.status === 'Reviewed' && (
+                        <button
+                          onClick={() => handleHideContent(report, false)}
+                          className="flex items-center gap-2 px-4 py-2 bg-gray-100 border-2 border-black font-bold hover:bg-gray-200"
+                        >
+                          <Eye className="w-4 h-4" /> Unhide Content
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <div className="space-y-4">
-            {reports.map((report: any) => (
-              <div
-                key={report.id}
-                className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="px-3 py-1 bg-[#FF006E] text-white border-2 border-black font-black text-sm">
-                        {report.reported_item_type}
-                      </span>
-                      <span className="px-3 py-1 bg-[#FFFF00] border-2 border-black font-black text-sm">
-                        {report.status}
-                      </span>
-                    </div>
-                    <div className="text-sm font-bold text-gray-600 mb-1">
-                      Reported: {new Date(report.created_date).toLocaleString()}
-                    </div>
-                    <div className="text-sm font-bold text-gray-600">
-                      Reporter ID: {report.reporter_anonymous_id}
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold text-gray-600">
-                    Report ID: {report.id.substring(0, 8)}...
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="font-black text-lg mb-2 text-red-600">{report.reason}</div>
-                  {report.details && (
-                    <div className="p-3 bg-gray-50 border-2 border-gray-300 font-medium">
-                      {report.details}
-                    </div>
-                  )}
-                </div>
-
-                {report.reviewed_by_admin_email && (
-                  <div className="mb-4 p-3 bg-blue-50 border-2 border-blue-300">
-                    <div className="font-bold text-sm">Reviewed by: {report.reviewed_by_admin_email}</div>
-                    {report.review_notes && (
-                      <div className="text-sm mt-1">{report.review_notes}</div>
-                    )}
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                {report.status === 'Pending' && (
-                  <div className="flex gap-3 flex-wrap">
-                    <button
-                      onClick={() => handleHideContent(report, true)}
-                      className="px-4 py-3 bg-[#FF006E] text-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center gap-2"
-                    >
-                      <EyeOff className="w-5 h-5" />
-                      HIDE CONTENT
-                    </button>
-                    <button
-                      onClick={() => handleDeleteContent(report)}
-                      className="px-4 py-3 bg-red-600 text-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center gap-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                      DELETE PERMANENTLY
-                    </button>
-                    <button
-                      onClick={() => handleDismiss(report)}
-                      className="px-4 py-3 bg-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center gap-2"
-                    >
-                      <Check className="w-5 h-5" />
-                      DISMISS
-                    </button>
-                  </div>
-                )}
-
-                {report.status === 'Reviewed' && (
-                  <div className="flex gap-3 flex-wrap">
-                    <button
-                      onClick={() => handleHideContent(report, false)}
-                      className="px-4 py-3 bg-[#00FF00] border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center gap-2"
-                    >
-                      <Eye className="w-5 h-5" />
-                      UNHIDE CONTENT
-                    </button>
-                    <button
-                      onClick={() => handleDeleteContent(report)}
-                      className="px-4 py-3 bg-red-600 text-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center gap-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                      DELETE PERMANENTLY
-                    </button>
-                  </div>
-                )}
+            <h2 className="text-3xl font-black mb-6">Manage All Posts</h2>
+            {allPosts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-2xl font-black text-gray-600">No posts found</div>
               </div>
-            ))}
+            ) : (
+              allPosts.map((post: any) => (
+                <div
+                  key={post.id}
+                  className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6 flex justify-between items-center gap-4"
+                >
+                  <div className="flex-1">
+                    <div className="font-black text-xl mb-1">{post.title || 'Untitled Post'}</div>
+                    <div className="text-sm font-bold text-gray-500 mb-2">
+                      ID: {post.id} • Votes: {post.total_votes} • Comments: {post.comment_count}
+                    </div>
+                    <div className="text-sm text-gray-600 line-clamp-2">
+                      {post.description}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      to={createPageUrl('Post', post.id)}
+                      target="_blank"
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 border-2 border-black font-bold hover:bg-blue-200"
+                    >
+                      <Eye className="w-4 h-4" /> View
+                    </Link>
+                    <button
+                      onClick={() => handleDeletePostDirectly(post.id)}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-red-100 border-2 border-black font-bold hover:bg-red-200 text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

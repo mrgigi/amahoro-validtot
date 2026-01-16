@@ -5,12 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function createPageUrl(page: string) {
+export function createPageUrl(page: string, id?: string) {
   switch (page) {
     case 'Feed': return '/';
     case 'CreatePost': return '/create-post';
     case 'AdminDashboard': return '/admin';
     case 'Profile': return '/profile';
+    case 'Post': return id ? `/#post-${id}` : '/';
     default: return '/';
   }
 }
