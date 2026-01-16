@@ -21,6 +21,7 @@ export default function Auth() {
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [country, setCountry] = useState("");
   const [cohort, setCohort] = useState<"1" | "2" | "">("");
+  const [jobTitle, setJobTitle] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"signup" | "signin">("signin");
   const [authRole, setAuthRole] = useState<"voter" | "admin">("voter");
@@ -47,11 +48,16 @@ export default function Auth() {
       }
 
       if (mode === "signup") {
-        if (!gender || !country || !cohort) {
-          throw new Error("Please select your gender, country, and cohort to sign up.");
+        if (authRole === "admin") {
+          if (!jobTitle.trim()) {
+            throw new Error("Please enter your job title or role to sign up as an admin.");
+          }
+        } else {
+          if (!gender || !country || !cohort) {
+            throw new Error("Please select your gender, country, and cohort to sign up.");
+          }
         }
 
-        // Check if user exists via RPC to bypass security obfuscation (if function exists)
         const { data: emailExists, error: rpcError } = await supabase.rpc("email_exists", {
           email_arg: email,
         });
@@ -67,10 +73,11 @@ export default function Auth() {
           password,
           options: {
             data: {
-              gender,
-              country,
-              cohort,
-              intended_role: authRole
+              gender: authRole === "voter" ? gender : null,
+              country: authRole === "voter" ? country : null,
+              cohort: authRole === "voter" ? cohort : null,
+              intended_role: authRole,
+              job_title: authRole === "admin" ? jobTitle : null,
             },
           },
         });
@@ -249,7 +256,20 @@ export default function Auth() {
             )}
           </div>
 
-          {mode === "signup" && (
+          {mode === "signup" && authRole === "admin" && (
+            <div>
+              <label className="block text-sm font-bold mb-1">Job title or role</label>
+              <input
+                type="text"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                placeholder="e.g. Campaign manager"
+              />
+            </div>
+          )}
+
+          {mode === "signup" && authRole === "voter" && (
             <>
               <div>
                 <label className="block text-sm font-bold mb-1">Gender</label>
