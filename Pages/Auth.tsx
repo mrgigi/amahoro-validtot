@@ -6,6 +6,9 @@ import { Eye, EyeOff } from "lucide-react";
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | "">("");
+  const [country, setCountry] = useState("");
+  const [cohort, setCohort] = useState<"1" | "2" | "">("");
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"signup" | "signin">("signin");
   const [loading, setLoading] = useState(false);
@@ -31,6 +34,10 @@ export default function Auth() {
       }
 
       if (mode === "signup") {
+        if (!gender || !country || !cohort) {
+          throw new Error("Please select your gender, country, and cohort to sign up.");
+        }
+
         // Check if user exists via RPC to bypass security obfuscation (if function exists)
         const { data: emailExists, error: rpcError } = await supabase.rpc("email_exists", {
           email_arg: email,
@@ -45,6 +52,13 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              gender,
+              country,
+              cohort,
+            },
+          },
         });
         if (error) {
           const message = error.message || "";
@@ -185,6 +199,77 @@ export default function Auth() {
               </button>
             )}
           </div>
+
+          {mode === "signup" && (
+            <>
+              <div>
+                <label className="block text-sm font-bold mb-1">Gender</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="male"
+                      checked={gender === "male"}
+                      onChange={() => setGender("male")}
+                      className="w-4 h-4"
+                    />
+                    <span>Male</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="gender"
+                      value="female"
+                      checked={gender === "female"}
+                      onChange={() => setGender("female")}
+                      className="w-4 h-4"
+                    />
+                    <span>Female</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-1">Country</label>
+                <input
+                  type="text"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                  placeholder="e.g. South Africa"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-1">Cohort</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="cohort"
+                      value="1"
+                      checked={cohort === "1"}
+                      onChange={() => setCohort("1")}
+                      className="w-4 h-4"
+                    />
+                    <span>Cohort 1</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="cohort"
+                      value="2"
+                      checked={cohort === "2"}
+                      onChange={() => setCohort("2")}
+                      className="w-4 h-4"
+                    />
+                    <span>Cohort 2</span>
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
 
           {error && (
             <div className="p-3 border-4 border-black bg-red-100 font-bold text-sm">

@@ -45,14 +45,14 @@ function generateRandomUsername() {
   return `${adjective}-${noun}-${number}`;
 }
 
-export async function ensureUserProfile(user: { id: string }) {
+export async function ensureUserProfile(user: { id: string; email?: string | null; user_metadata?: any }) {
   if (!user.id) {
     return null;
   }
 
   const { data: existing } = await supabase
     .from("profiles")
-    .select("id, username, created_at, is_banned")
+    .select("id, username, created_at, is_banned, gender, country, cohort")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -62,11 +62,19 @@ export async function ensureUserProfile(user: { id: string }) {
 
   const username = generateRandomUsername();
 
+  const metadata = (user as any).user_metadata || {};
+  const gender = metadata.gender ?? null;
+  const country = metadata.country ?? null;
+  const cohort = metadata.cohort ?? null;
+
   const { data, error } = await supabase
     .from("profiles")
     .insert({
       id: user.id,
-      username
+      username,
+      gender,
+      country,
+      cohort
     })
     .select()
     .single();
