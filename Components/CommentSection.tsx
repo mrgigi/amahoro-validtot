@@ -42,12 +42,26 @@ export default function CommentSection({ post }: { post: any }) {
 
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      const anonName = ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
+      // 1. Get current user's profile username
+      const { data: { user } } = await supabase.auth.getUser();
+      let authorName = ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.username) {
+          authorName = profile.username;
+        }
+      }
       
       const { error: commentError } = await supabase.from('comments').insert({
         post_id: postId,
         content,
-        anonymous_name: anonName
+        anonymous_name: authorName
       });
 
       if (commentError) throw commentError;

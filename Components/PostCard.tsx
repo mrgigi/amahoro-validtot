@@ -37,22 +37,47 @@ export default function PostCard({ post }) {
 
   const voteMutation = useMutation({
     mutationFn: async (optionIndex: number) => {
-      await supabase.from('votes').insert({
+      // 1. Prepare new vote data
+      const currentVotes = Array.isArray(post.votes) 
+        ? [...post.votes] 
+        : new Array(post.images?.length || post.options?.length || 2).fill(0);
+      
+      // Ensure the array is long enough (in case of schema mismatch)
+      while (currentVotes.length <= optionIndex) {
+        currentVotes.push(0);
+      }
+      
+      currentVotes[optionIndex] = (currentVotes[optionIndex] || 0) + 1;
+      const newTotal = (post.total_votes || 0) + 1;
+
+      // 2. Record the individual vote
+      const { error: voteError } = await supabase.from('votes').insert({
         post_id: post.id,
         option_index: optionIndex,
         anonymous_id: anonymousId
       });
 
-      const currentVotes = post.votes || new Array(post.images?.length || 3).fill(0);
-      const updatedVotes = [...currentVotes];
-      updatedVotes[optionIndex] = (updatedVotes[optionIndex] || 0) + 1;
+      if (voteError) {
+        console.error('Error recording vote:', voteError);
+        throw voteError;
+      }
 
-      await supabase.from('posts').update({
-        votes: updatedVotes,
-        total_votes: (post.total_votes || 0) + 1
+      // 3. Update the post aggregates
+      const { error: updateError } = await supabase.from('posts').update({
+        votes: currentVotes,
+        total_votes: newTotal
       }).eq('id', post.id);
       
+      if (updateError) {
+        console.error('Error updating post stats:', updateError);
+        throw updateError;
+      }
+      
       return optionIndex;
+    },
+    onError: (error) => {
+      console.error('Vote failed:', error);
+      alert('Failed to submit vote. Please try again.');
     },
     onSuccess: (value) => {
       localStorage.setItem(`vote_${post.id}`, value.toString());
