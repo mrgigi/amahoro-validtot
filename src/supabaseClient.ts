@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const usernameAdjectives = [
   "bright",
@@ -78,13 +78,12 @@ export async function ensureUserProfile(user: { id: string }) {
   return data;
 }
 
-export async function checkAdminRole(userId: string): Promise<'super_admin' | 'admin' | null> {
+export async function checkAdminRole(userId: string): Promise<"super_admin" | "admin" | null> {
   const { data, error } = await supabase
-    .from('admins')
-    .select('role')
-    .eq('user_id', userId)
+    .from("admins")
+    .select("role")
+    .eq("user_id", userId)
     .maybeSingle();
-  
   if (error || !data) return null;
-  return data.role as 'super_admin' | 'admin';
+  return data.role as "super_admin" | "admin";
 }

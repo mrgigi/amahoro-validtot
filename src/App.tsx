@@ -31,7 +31,18 @@ function AuthScreen() {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          const message = error.message || "";
+          if (
+            message.toLowerCase().includes("already registered") ||
+            message.toLowerCase().includes("already exists")
+          ) {
+            throw new Error(
+              "An account already exists with this email. Please sign in instead."
+            );
+          }
+          throw error;
+        }
         setMessage("Check your email to confirm your account, then sign in.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
