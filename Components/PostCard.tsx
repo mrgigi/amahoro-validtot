@@ -212,6 +212,12 @@ export default function PostCard({ post }) {
       navigate('/auth', { state: { from: location } });
       return;
     }
+    const confirmed = window.confirm(
+      "Are you sure? You can't change your vote after this."
+    );
+    if (!confirmed) {
+      return;
+    }
     await voteMutation.mutateAsync({ optionIndex: option, userId: user.id });
   };
 

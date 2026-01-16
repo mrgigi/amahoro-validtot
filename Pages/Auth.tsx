@@ -60,11 +60,30 @@ export default function Auth() {
         }
         setMessage("Check your email to confirm your account, then sign in.");
       } else {
+        const { data: emailExists, error: rpcError } = await supabase.rpc("email_exists", {
+          email_arg: email,
+        });
+
+        if (!rpcError && !emailExists) {
+          throw new Error("No account found with this email. Please sign up instead.");
+        }
+
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+
+        if (error) {
+          const message = error.message || "";
+          if (
+            message.toLowerCase().includes("invalid login credentials") ||
+            message.toLowerCase().includes("invalid login") ||
+            message.toLowerCase().includes("invalid email or password")
+          ) {
+            throw new Error("Incorrect email or password. Please try again.");
+          }
+          throw error;
+        }
         const target =
           fromPath && allowedReturnPaths.includes(fromPath)
             ? fromPath
@@ -102,6 +121,14 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5] p-4">
       <div className="w-full max-w-md bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+        <div className="mb-4 flex justify-between items-center">
+          <Link
+            to="/"
+            className="text-xs font-bold underline"
+          >
+            Go to home
+          </Link>
+        </div>
         <div className="text-center mb-6">
           <div className="text-4xl font-black mb-2 transform -rotate-2">
             ValidToT
@@ -215,12 +242,6 @@ export default function Auth() {
               </button>
             </>
           )}
-        </div>
-
-        <div className="mt-3 text-center text-xs font-bold">
-          <Link to="/" className="underline">
-            Go to home
-          </Link>
         </div>
       </div>
     </div>
