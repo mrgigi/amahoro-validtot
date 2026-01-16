@@ -1,25 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../src/supabaseClient';
+import { supabase, checkAdminRole } from '../src/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3, FileText, XCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3, FileText, Users, UserX, UserCheck } from 'lucide-react';
 import { createPageUrl } from '../src/lib/utils';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('Pending');
-  const [activeTab, setActiveTab] = useState<'reports' | 'posts'>('reports');
+  const [activeTab, setActiveTab] = useState<'reports' | 'posts' | 'users'>('reports');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Temporary: Allow anyone for now since auth isn't fully set up
-      // In production, you'd check supabase.auth.getUser() and verify admin role
       const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user || { email: 'admin@example.com', role: 'admin' });
+      if (!user) {
+        navigate('/');
+        return;
+      }
+
+      const role = await checkAdminRole(user.id);
+      if (!role) {
+        navigate('/');
+        return;
+      }
+      
+      setCurrentUser({ ...user, role });
     };
     checkAuth();
-  }, []);
+  }, [navigate]);
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['reports', filterStatus],
@@ -51,6 +61,19 @@ export default function AdminDashboard() {
     enabled: !!currentUser && activeTab === 'posts'
   });
 
+  const { data: allUsers = [], isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['all_users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentUser && activeTab === 'users'
+  });
+
   // Analytics queries
   
 
@@ -78,6 +101,16 @@ export default function AdminDashboard() {
     queryKey: ['stats', 'comments_count'],
     queryFn: async () => {
       const { count, error } = await supabase.from('comments').select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentUser
+  });
+
+  const { data: usersCount = 0 } = useQuery({
+    queryKey: ['stats', 'users_count'],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
       if (error) throw error;
       return count || 0;
     },
@@ -149,6 +182,19 @@ export default function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
       queryClient.invalidateQueries({ queryKey: ['all_posts'] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
+    }
+  });
+
+  const toggleBanMutation = useMutation({
+    mutationFn: async ({ userId, isBanned }: { userId: string, isBanned: boolean }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_banned: isBanned })
+        .eq('id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all_users'] });
     }
   });
 
@@ -232,7 +278,20 @@ export default function AdminDashboard() {
     }
   };
 
-  
+  const handleToggleBan = async (userId: string, currentStatus: boolean) => {
+    try {
+      if (confirm(`Are you sure you want to ${currentStatus ? 'UNBAN' : 'BAN'} this user?`)) {
+        await toggleBanMutation.mutateAsync({
+          userId,
+          isBanned: !currentStatus
+        });
+        alert(`User ${currentStatus ? 'unbanned' : 'banned'} successfully.`);
+      }
+    } catch (error) {
+      console.error('Error toggling ban:', error);
+      alert('Failed to update user status. Please check database permissions.');
+    }
+  };
 
   if (!currentUser) {
     return (
@@ -272,20 +331,28 @@ export default function AdminDashboard() {
               <h1 className="text-4xl font-black transform -rotate-1">ADMIN DASHBOARD</h1>
             </div>
           </div>
+          {currentUser?.role === 'super_admin' && (
+            <Link
+              to="/super-admin"
+              className="px-4 py-2 bg-purple-600 text-white border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all text-sm"
+            >
+              SUPER ADMIN PANEL
+            </Link>
+          )}
         </div>
 
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{postsCount}</div><div className="font-bold ml-auto">Posts</div></div>
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{votesCount}</div><div className="font-bold ml-auto">Votes</div></div>
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{commentsCount}</div><div className="font-bold ml-auto">Comments</div></div>
-          <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{pendingReportsCount}</div><div className="font-bold ml-auto">Pending Reports</div></div>
+          <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><Users className="w-6 h-6" /><div className="font-black text-2xl">{usersCount}</div><div className="font-bold ml-auto">Users</div></div>
         </div>
 
         {/* View Tabs */}
-        <div className="flex gap-4 mb-8 border-b-4 border-black pb-1">
+        <div className="flex gap-4 mb-8 border-b-4 border-black pb-1 overflow-x-auto">
           <button
             onClick={() => setActiveTab('reports')}
-            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all ${
+            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all whitespace-nowrap ${
               activeTab === 'reports'
                 ? 'bg-black text-white translate-y-[4px]'
                 : 'bg-transparent text-black hover:bg-gray-200'
@@ -296,7 +363,7 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setActiveTab('posts')}
-            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all ${
+            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all whitespace-nowrap ${
               activeTab === 'posts'
                 ? 'bg-black text-white translate-y-[4px]'
                 : 'bg-transparent text-black hover:bg-gray-200'
@@ -304,6 +371,17 @@ export default function AdminDashboard() {
           >
             <FileText className="w-5 h-5" />
             All Posts Management
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all whitespace-nowrap ${
+              activeTab === 'users'
+                ? 'bg-black text-white translate-y-[4px]'
+                : 'bg-transparent text-black hover:bg-gray-200'
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            Users Management
           </button>
         </div>
 
@@ -430,7 +508,7 @@ export default function AdminDashboard() {
               </div>
             )}
           </>
-        ) : (
+        ) : activeTab === 'posts' ? (
           <div className="space-y-4">
             <h2 className="text-3xl font-black mb-6">Manage All Posts</h2>
             {allPosts.length === 0 ? (
@@ -465,6 +543,59 @@ export default function AdminDashboard() {
                       className="flex items-center justify-center gap-2 px-4 py-2 bg-red-100 border-2 border-black font-bold hover:bg-red-200 text-red-700"
                     >
                       <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <h2 className="text-3xl font-black mb-6">Manage Users</h2>
+            {allUsers.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-2xl font-black text-gray-600">No users found</div>
+              </div>
+            ) : (
+              allUsers.map((user: any) => (
+                <div
+                  key={user.id}
+                  className={`bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6 flex flex-col sm:flex-row justify-between items-center gap-4 ${user.is_banned ? 'bg-red-50' : ''}`}
+                >
+                  <div className="flex-1 w-full">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="font-black text-xl">{user.username || 'Anonymous'}</div>
+                      {user.is_banned && (
+                        <span className="px-3 py-1 bg-red-600 text-white border-2 border-black font-black text-xs uppercase">
+                          BANNED
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-bold text-gray-500">
+                      ID: {user.id}
+                    </div>
+                    <div className="text-sm font-medium text-gray-400">
+                      Joined: {new Date(user.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => handleToggleBan(user.id, user.is_banned)}
+                      className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all ${
+                        user.is_banned 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                      }`}
+                    >
+                      {user.is_banned ? (
+                        <>
+                          <UserCheck className="w-5 h-5" /> UNBAN USER
+                        </>
+                      ) : (
+                        <>
+                          <UserX className="w-5 h-5" /> BAN USER
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

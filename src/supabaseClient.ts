@@ -52,7 +52,7 @@ export async function ensureUserProfile(user: { id: string }) {
 
   const { data: existing } = await supabase
     .from("profiles")
-    .select("id, username, created_at")
+    .select("id, username, created_at, is_banned")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -78,5 +78,13 @@ export async function ensureUserProfile(user: { id: string }) {
   return data;
 }
 
-export { supabase };
-export default supabase;
+export async function checkAdminRole(userId: string): Promise<'super_admin' | 'admin' | null> {
+  const { data, error } = await supabase
+    .from('admins')
+    .select('role')
+    .eq('user_id', userId)
+    .maybeSingle();
+  
+  if (error || !data) return null;
+  return data.role as 'super_admin' | 'admin';
+}

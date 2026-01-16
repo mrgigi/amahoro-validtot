@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "@/pages/Home";
 import CreatePost from "../Pages/CreatePost";
 import AdminDashboard from "../Pages/AdminDashboard";
+import SuperAdminDashboard from "../Pages/SuperAdminDashboard";
 import Profile from "../Pages/Profile";
 import { supabase, ensureUserProfile } from "./supabaseClient";
 
@@ -147,6 +148,7 @@ function AuthScreen() {
 export default function App() {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bannedMessage, setBannedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -175,7 +177,15 @@ export default function App() {
         return;
       }
       try {
-        await ensureUserProfile({ id: user.id });
+        const profile = await ensureUserProfile({ id: user.id });
+        if (profile?.is_banned) {
+          setBannedMessage(
+            "Your account has been suspended. Contact support if you believe this is a mistake."
+          );
+          await supabase.auth.signOut();
+        } else {
+          setBannedMessage(null);
+        }
       } catch (error) {
         console.error("Failed to ensure profile", error);
       }
@@ -194,7 +204,16 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthScreen />;
+    return (
+      <>
+        {bannedMessage && (
+          <div className="fixed top-0 left-0 w-full p-4 bg-red-600 text-white font-black text-center border-b-4 border-black z-50">
+            ⚠️ {bannedMessage}
+          </div>
+        )}
+        <AuthScreen />
+      </>
+    );
   }
 
   return (
@@ -203,7 +222,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/create-post" element={<CreatePost />} />
         <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/super-admin" element={<SuperAdminDashboard />} />
       </Routes>
     </Router>
   );
