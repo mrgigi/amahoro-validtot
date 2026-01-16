@@ -197,7 +197,7 @@ export default function Auth() {
                 authRole === "voter" ? "bg-[#00FF00]" : "bg-white"
               }`}
             >
-              Sign up or Login as voter
+              {mode === "signup" ? "Sign up as voter" : "Sign in as voter"}
             </button>
 
             <button
@@ -207,7 +207,7 @@ export default function Auth() {
                 authRole === "admin" ? "bg-[#FFFF00]" : "bg-white"
               }`}
             >
-              Sign up or Login as admin
+              {mode === "signup" ? "Sign up as admin" : "Sign in as admin"}
             </button>
           </div>
 
