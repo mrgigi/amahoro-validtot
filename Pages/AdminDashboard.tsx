@@ -5,12 +5,63 @@ import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3
 import { createPageUrl } from '../src/lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 
+function PieChart({ segments }: { segments: { value: number; color: string }[] }) {
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
+
+  if (total <= 0) {
+    return (
+      <div className="w-48 h-48 flex items-center justify-center text-sm font-bold text-gray-500">
+        No data
+      </div>
+    );
+  }
+
+  const radius = 15.915;
+  const circumference = 2 * Math.PI * radius;
+  let cumulativePercent = 0;
+
+  return (
+    <svg viewBox="0 0 32 32" className="w-48 h-48 mx-auto">
+      <circle
+        r={radius}
+        cx="16"
+        cy="16"
+        fill="transparent"
+        stroke="#E5E7EB"
+        strokeWidth="6"
+      />
+      {segments.map((segment, index) => {
+        const valuePercent = segment.value / total;
+        const dashArray = `${valuePercent * circumference} ${circumference}`;
+        const dashOffset = -cumulativePercent * circumference;
+        cumulativePercent += valuePercent;
+
+        return (
+          <circle
+            key={index}
+            r={radius}
+            cx="16"
+            cy="16"
+            fill="transparent"
+            stroke={segment.color}
+            strokeWidth="6"
+            strokeDasharray={dashArray}
+            strokeDashoffset={dashOffset}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('Pending');
-  const [activeTab, setActiveTab] = useState<'reports' | 'posts' | 'users'>('reports');
+  const [activeTab, setActiveTab] = useState<'reports' | 'posts' | 'users'>('posts');
   const [accessDenied, setAccessDenied] = useState(false);
+  const [selectedPostForAnalytics, setSelectedPostForAnalytics] = useState<any | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -119,8 +170,75 @@ export default function AdminDashboard() {
     enabled: !!currentUser && activeTab === 'users'
   });
 
-  // Analytics queries
-  
+  const { data: postAnalytics, isLoading: isLoadingPostAnalytics } = useQuery({
+    queryKey: ['post_analytics', selectedPostId],
+    queryFn: async () => {
+      if (!selectedPostId) {
+        return null;
+      }
+
+      const postId = selectedPostId;
+
+      const { data: voteRows, error: votesError } = await supabase
+        .from('votes')
+        .select('option_index')
+        .eq('post_id', postId);
+
+      if (votesError) {
+        throw votesError;
+      }
+
+      const voteCountsMap: Record<string, number> = {};
+      for (const row of voteRows || []) {
+        const index = (row as any).option_index ?? 0;
+        const key = String(index);
+        voteCountsMap[key] = (voteCountsMap[key] || 0) + 1;
+      }
+
+      const voteCounts = Object.entries(voteCountsMap).map(([key, count]) => ({
+        option_index: Number(key),
+        count
+      }));
+
+      const { data: reportRows, error: reportsError } = await supabase
+        .from('reports')
+        .select('reason')
+        .eq('reported_item_type', 'Post')
+        .eq('reported_item_id', postId);
+
+      if (reportsError) {
+        throw reportsError;
+      }
+
+      const reportCountsMap: Record<string, number> = {};
+      for (const row of reportRows || []) {
+        const reason = (row as any).reason || 'Other';
+        reportCountsMap[reason] = (reportCountsMap[reason] || 0) + 1;
+      }
+
+      const reportCounts = Object.entries(reportCountsMap).map(([reason, count]) => ({
+        reason,
+        count
+      }));
+
+      return {
+        votesByOption: voteCounts,
+        reportsByReason: reportCounts
+      };
+    },
+    enabled: !!currentUser && !!selectedPostId
+  });
+
+  const analyticsVotes = (postAnalytics as any)?.votesByOption || [];
+  const analyticsReports = (postAnalytics as any)?.reportsByReason || [];
+  const totalAnalyticsVotes = (analyticsVotes as any[]).reduce(
+    (sum, row: any) => sum + (row.count || 0),
+    0
+  );
+  const totalAnalyticsReports = (analyticsReports as any[]).reduce(
+    (sum, row: any) => sum + (row.count || 0),
+    0
+  );
 
   const { data: postsCount = 0 } = useQuery({
     queryKey: ['stats', 'posts_count'],
@@ -394,8 +512,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] p-4">
-      <div className="max-w-6xl mx-auto">
+    <>
+      <div className="min-h-screen bg-[#F5F5F5] p-4">
+        <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -422,17 +541,6 @@ export default function AdminDashboard() {
         {/* View Tabs */}
         <div className="flex gap-4 mb-8 border-b-4 border-black pb-1 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('reports')}
-            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all whitespace-nowrap ${
-              activeTab === 'reports'
-                ? 'bg-black text-white translate-y-[4px]'
-                : 'bg-transparent text-black hover:bg-gray-200'
-            }`}
-          >
-            <Shield className="w-5 h-5" />
-            Reports Management
-          </button>
-          <button
             onClick={() => setActiveTab('posts')}
             className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all whitespace-nowrap ${
               activeTab === 'posts'
@@ -442,6 +550,17 @@ export default function AdminDashboard() {
           >
             <FileText className="w-5 h-5" />
             All Posts Management
+          </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`flex items-center gap-2 px-6 py-3 font-black text-lg transition-all whitespace-nowrap ${
+              activeTab === 'reports'
+                ? 'bg-black text-white translate-y-[4px]'
+                : 'bg-transparent text-black hover:bg-gray-200'
+            }`}
+          >
+            <Shield className="w-5 h-5" />
+            Reports Management
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -607,6 +726,15 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedPostForAnalytics(post);
+                        setSelectedPostId(post.id);
+                      }}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-[#FFFF00] border-2 border-black font-bold hover:bg-yellow-300"
+                    >
+                      <BarChart3 className="w-4 h-4" /> Analytics
+                    </button>
                     <Link
                       to={createPageUrl('Post', post.id)}
                       target="_blank"
@@ -679,7 +807,121 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
+        </div>
       </div>
-    </div>
+
+      {selectedPostForAnalytics && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="w-full max-w-xl bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <div className="text-xs font-bold text-gray-500 mb-1">
+                  Post ID: {selectedPostForAnalytics.id}
+                </div>
+                <div className="text-2xl font-black mb-1">
+                  {selectedPostForAnalytics.title || 'Untitled Post'}
+                </div>
+                <div className="text-xs font-bold text-gray-500">
+                  Created: {selectedPostForAnalytics.created_at
+                    ? new Date(selectedPostForAnalytics.created_at).toLocaleString()
+                    : 'Unknown'}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedPostForAnalytics(null);
+                  setSelectedPostId(null);
+                }}
+                className="px-3 py-2 bg-black text-white border-2 border-black font-bold text-xs"
+              >
+                CLOSE
+              </button>
+            </div>
+
+            {isLoadingPostAnalytics ? (
+              <div className="py-8 text-center font-bold">Loading analytics...</div>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <div className="text-lg font-black mb-2">Vote distribution</div>
+                  <PieChart
+                    segments={(analyticsVotes as any[]).map((row: any, index: number) => {
+                      const colors = ['#FF006E', '#3B82F6', '#22C55E', '#F97316', '#A855F7'];
+                      const color = colors[index % colors.length];
+                      return {
+                        value: row.count || 0,
+                        color
+                      };
+                    })}
+                  />
+                  <div className="mt-4 space-y-1">
+                    {(analyticsVotes as any[]).length === 0 ? (
+                      <div className="text-sm font-bold text-gray-500">No votes yet for this post.</div>
+                    ) : (
+                      (analyticsVotes as any[]).map((row: any) => {
+                        const index = row.option_index ?? 0;
+                        const label =
+                          (selectedPostForAnalytics.options || [])[index] ||
+                          `Option ${String.fromCharCode(65 + index)}`;
+                        const count = row.count || 0;
+                        const percent =
+                          totalAnalyticsVotes > 0
+                            ? Math.round((count / totalAnalyticsVotes) * 100)
+                            : 0;
+
+                        return (
+                          <div key={index} className="flex justify-between text-sm font-bold">
+                            <span>
+                              {label} (index {index})
+                            </span>
+                            <span>
+                              {count} vote{count !== 1 ? 's' : ''} ({percent}%)
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="text-lg font-black mb-2">Reports by reason</div>
+                  {totalAnalyticsReports === 0 ? (
+                    <div className="py-2 text-sm font-bold text-gray-500">
+                      No reports for this post.
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {(analyticsReports as any[]).map((row: any) => {
+                        const reason = row.reason || 'Other';
+                        const count = row.count || 0;
+                        const percent =
+                          totalAnalyticsReports > 0
+                            ? Math.round((count / totalAnalyticsReports) * 100)
+                            : 0;
+
+                        return (
+                          <div key={reason} className="flex justify-between text-sm font-bold">
+                            <span>{reason}</span>
+                            <span>
+                              {count} report{count !== 1 ? 's' : ''} ({percent}%)
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 text-xs font-bold text-gray-500">
+                  Total votes: {selectedPostForAnalytics.total_votes || 0} • Comments:{' '}
+                  {selectedPostForAnalytics.comment_count || 0}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
