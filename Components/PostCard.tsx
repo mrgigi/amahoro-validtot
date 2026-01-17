@@ -25,18 +25,8 @@ export default function PostCard({ post }) {
   const location = useLocation();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const codeFromUrl = params.get('code');
-
-    if (post.is_private && codeFromUrl && post.access_code && codeFromUrl === post.access_code) {
-      setIsUnlocked(true);
-      setUnlockCode('');
-      setUnlockError(null);
-      return;
-    }
-
     setIsUnlocked(!post.is_private);
-  }, [post.id, post.is_private, post.access_code]);
+  }, [post.id, post.is_private]);
 
   useEffect(() => {
     let isMounted = true;
@@ -198,13 +188,7 @@ export default function PostCard({ post }) {
   });
 
   const handleShare = () => {
-    const url = new URL(window.location.origin + createPageUrl('Feed'));
-    url.searchParams.set('postId', post.id);
-    if (post.is_private && post.access_code) {
-      url.searchParams.set('code', post.access_code);
-    }
-
-    const postUrl = url.toString();
+    const postUrl = `${window.location.origin}${createPageUrl('Feed')}?postId=${post.id}`;
     const shareText = `${post.title}\n\n${postUrl}`;
     
     if (navigator.share) {

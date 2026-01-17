@@ -14,6 +14,7 @@ export default function CreatePost() {
   const [uploading, setUploading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [accessCode, setAccessCode] = useState('');
+  const [hasCopiedCode, setHasCopiedCode] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const createPostMutation = useMutation({
@@ -27,23 +28,8 @@ export default function CreatePost() {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (createdPost) => {
-      const isPrivatePost = !!createdPost.is_private;
-      const postId = createdPost.id as string | undefined;
-      const code = isPrivatePost ? (createdPost.access_code as string | null) : null;
-
-      const params = new URLSearchParams();
-      if (postId) {
-        params.set('postId', postId);
-      }
-      if (isPrivatePost && code) {
-        params.set('code', code);
-      }
-
-      const baseUrl = createPageUrl('Feed');
-      const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
-
-      navigate(url);
+    onSuccess: async (_createdPost) => {
+      navigate(createPageUrl('Feed'));
     },
     onError: (error: any) => {
       console.error('Error creating post:', error);
@@ -122,6 +108,22 @@ export default function CreatePost() {
       code += chars[index];
     }
     setAccessCode(code);
+    setHasCopiedCode(false);
+  };
+
+  const handleCopyCode = async () => {
+    const value = accessCode.trim();
+    if (!value) {
+      alert('Enter an access code first, or tap AUTO.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      setHasCopiedCode(true);
+      alert('Access code copied. Save it somewhere safe.');
+    } catch {
+      alert('Could not copy automatically. Please select and copy the code manually.');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,6 +137,11 @@ export default function CreatePost() {
 
     if (isPrivate && !accessCode.trim()) {
       alert('Enter an access code or auto-generate one to make this post private.');
+      return;
+    }
+
+    if (isPrivate && !hasCopiedCode) {
+      alert('Please copy your access code (or save it) before posting. Tap COPY next to the code.');
       return;
     }
 
@@ -316,7 +323,10 @@ export default function CreatePost() {
                   <input
                     type="text"
                     value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                    onChange={(e) => {
+                      setAccessCode(e.target.value.toUpperCase());
+                      setHasCopiedCode(false);
+                    }}
                     maxLength={12}
                     className="flex-1 p-3 border-4 border-black font-bold bg-white focus:outline-none focus:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
                     placeholder="e.g. ABC123"
@@ -327,6 +337,13 @@ export default function CreatePost() {
                     className="px-4 py-3 border-4 border-black bg-black text-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                   >
                     AUTO
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopyCode}
+                    className="px-4 py-3 border-4 border-black bg-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  >
+                    COPY
                   </button>
                 </div>
               </div>
