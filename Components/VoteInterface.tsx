@@ -30,6 +30,9 @@ function VoteInterface({ post, onVote, hasVoted, userVote }: VoteInterfaceProps)
   if (hasVoted) {
     return (
       <div className="space-y-4">
+        <div className="p-3 bg-black text-[#FFFF00] border-4 border-black font-black text-center text-sm">
+          Thanks for voting. You can also comment, check and react to other comments and share.
+        </div>
         {options.map((option: string, index: number) => {
           const percent = post.total_votes > 0 
             ? Math.round((votes[index] / post.total_votes) * 100) 

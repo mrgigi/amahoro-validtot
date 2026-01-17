@@ -65,6 +65,11 @@ export default function Feed() {
         if (postElement) {
           postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete('postId');
+        window.history.replaceState({}, '', url.toString());
+        setDeepLinkPostId(null);
       }, 300);
     }
   }, [allPosts]);

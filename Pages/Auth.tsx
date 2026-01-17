@@ -225,7 +225,7 @@ export default function Auth() {
 
   const authContextMessage =
     authReason === "vote"
-      ? "Sign in to vote and see live results."
+      ? null
       : authReason === "comment"
       ? "Sign in to add a comment."
       : authReason === "report_post"
@@ -379,12 +379,12 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5] p-4">
       <div className="w-full max-w-md bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
-        <div className="mb-4 flex justify-between items-center">
+        <div className="mb-4 flex justify-center">
           <Link
             to="/"
-            className="text-xs font-bold underline"
+            className="px-4 py-2 bg-[#F5F5F5] border-4 border-black font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
           >
-            Go to home
+            Go home
           </Link>
         </div>
         <div className="text-center mb-6">

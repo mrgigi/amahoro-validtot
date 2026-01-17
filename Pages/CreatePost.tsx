@@ -418,7 +418,7 @@ export default function CreatePost() {
           {images.length >= 2 && (
             <div className="border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 space-y-3">
               <div className="text-xs font-black text-gray-600">Preview</div>
-              <div className="text-2xl font-black transform -rotate-1">
+              <div className="text-3xl md:text-4xl font-black leading-tight transform -rotate-1">
                 {title || (options.length ? options.join(' or ') : 'Your question will show here')}
               </div>
               <div
@@ -460,117 +460,119 @@ export default function CreatePost() {
           )}
 
           <div>
-            <label className="block text-xl font-black mb-2 transform -rotate-1">
-              VISIBILITY
-            </label>
-            <div className="flex gap-3 mb-3">
-              <button
-                type="button"
-                onClick={() => setIsPrivate(false)}
-                className={`flex-1 p-3 border-4 border-black font-black ${
-                  !isPrivate ? 'bg-[#00FF00]' : 'bg-white'
-                }`}
-              >
-                Public
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPrivate(true)}
-                className={`flex-1 p-3 border-4 border-black font-black ${
-                  isPrivate ? 'bg-[#FFFF00]' : 'bg-white'
-                }`}
-              >
-                Private (code)
-              </button>
-            </div>
-            {isPrivate && (
-              <div className="space-y-2">
-                <label className="block text-sm font-bold">
-                  Access code you will share with your community
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={accessCode}
-                    onChange={(e) => {
-                      const value = e.target.value.toUpperCase();
-                      setAccessCode(value);
-                      setHasCopiedCode(false);
-                      setShowCopyWarning(!!value);
-                    }}
-                    maxLength={12}
-                    className="flex-1 p-3 border-4 border-black font-bold uppercase bg-white focus:outline-none focus:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
-                    placeholder="e.g. ABC123"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleGenerateCode}
-                    className="px-4 py-3 border-4 border-black bg-black text-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                  >
-                    AUTO
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="px-4 py-3 border-4 border-black bg-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                  >
-                    COPY
-                  </button>
-                </div>
-                {isPrivate && showCopyWarning && !hasCopiedCode && accessCode.trim() && (
-                  <div className="text-xs font-bold text-red-600 mt-1">
-                    Don't forget to tap COPY and save this code. Without it, voters can't unlock your post.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div>
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="w-full flex items-center justify-between p-3 border-4 border-black bg-white font-black text-sm"
             >
-              <span>Advanced settings</span>
+              <span>Additional settings</span>
               <span>{showAdvanced ? 'Hide' : 'Show'}</span>
             </button>
             {showAdvanced && (
-              <div className="mt-3 p-4 border-4 border-black bg-white space-y-3">
-                <label className="flex items-center gap-2 font-bold text-sm">
-                  <input
-                    type="checkbox"
-                    checked={enableTimedVoting}
-                    onChange={(e) => setEnableTimedVoting(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <span>Enable timed voting</span>
-                </label>
-                {enableTimedVoting && (
-                  <>
-                    <div>
-                      <div className="text-xs font-bold mb-1">Voting starts</div>
-                      <input
-                        type="datetime-local"
-                        value={votingStartsAt}
-                        onChange={(e) => setVotingStartsAt(e.target.value)}
-                        className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                      />
+              <div className="mt-3 p-4 border-4 border-black bg-white space-y-4">
+                <div>
+                  <label className="block text-xl font-black mb-2 transform -rotate-1">
+                    VISIBILITY
+                  </label>
+                  <div className="flex gap-3 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivate(false)}
+                      className={`flex-1 p-3 border-4 border-black font-black ${
+                        !isPrivate ? 'bg-[#00FF00]' : 'bg-white'
+                      }`}
+                    >
+                      Public
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivate(true)}
+                      className={`flex-1 p-3 border-4 border-black font-black ${
+                        isPrivate ? 'bg-[#FFFF00]' : 'bg-white'
+                      }`}
+                    >
+                      Private (code)
+                    </button>
+                  </div>
+                  {isPrivate && (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-bold">
+                        Access code you will share with your community
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={accessCode}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setAccessCode(value);
+                            setHasCopiedCode(false);
+                            setShowCopyWarning(!!value);
+                          }}
+                          maxLength={12}
+                          className="flex-1 p-3 border-4 border-black font-bold uppercase bg-white focus:outline-none focus:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+                          placeholder="e.g. ABC123"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleGenerateCode}
+                          className="px-4 py-3 border-4 border-black bg-black text-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                        >
+                          AUTO
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCopyCode}
+                          className="px-4 py-3 border-4 border-black bg-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                        >
+                          COPY
+                        </button>
+                      </div>
+                      {isPrivate && showCopyWarning && !hasCopiedCode && accessCode.trim() && (
+                        <div className="text-xs font-bold text-red-600 mt-1">
+                          Don't forget to tap COPY and save this code. Without it, voters can't unlock your post.
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <div className="text-xs font-bold mb-1">Voting ends</div>
-                      <input
-                        type="datetime-local"
-                        value={votingEndsAt}
-                        onChange={(e) => setVotingEndsAt(e.target.value)}
-                        className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                      />
-                    </div>
-                    <div className="text-[11px] font-bold text-gray-600">
-                      Times use your local timezone. Campaigns are only open for voting between these times.
-                    </div>
-                  </>
-                )}
+                  )}
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 font-bold text-sm">
+                    <input
+                      type="checkbox"
+                      checked={enableTimedVoting}
+                      onChange={(e) => setEnableTimedVoting(e.target.checked)}
+                      className="w-4 h-4"
+                    />
+                    <span>Enable timed voting</span>
+                  </label>
+                  {enableTimedVoting && (
+                    <>
+                      <div className="mt-2">
+                        <div className="text-xs font-bold mb-1">Voting starts</div>
+                        <input
+                          type="datetime-local"
+                          value={votingStartsAt}
+                          onChange={(e) => setVotingStartsAt(e.target.value)}
+                          className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                        />
+                      </div>
+                      <div className="mt-2">
+                        <div className="text-xs font-bold mb-1">Voting ends</div>
+                        <input
+                          type="datetime-local"
+                          value={votingEndsAt}
+                          onChange={(e) => setVotingEndsAt(e.target.value)}
+                          className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                        />
+                      </div>
+                      <div className="mt-2 text-[11px] font-bold text-gray-600">
+                        Times use your local timezone. Campaigns are only open for voting between these times.
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
