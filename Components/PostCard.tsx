@@ -248,24 +248,38 @@ export default function PostCard({ post }) {
   const isAfterVoting = votingState === 'closed';
   const isVotingActive = votingState === 'active' || votingState === 'always_active';
 
-  const formatCountdown = () => {
+  const formatStartCountdown = () => {
     if (!votingStartsAt) return '';
     const diffMs = votingStartsAt.getTime() - now.getTime();
-    if (diffMs <= 0) return 'a moment';
+    if (diffMs <= 0) return '00:00:00';
     const totalSeconds = Math.floor(diffMs / 1000);
     const days = Math.floor(totalSeconds / 86400);
     const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    const time = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     if (days > 0) {
-      return `${days} day${days !== 1 ? 's' : ''}`;
+      return `${days}d ${time}`;
     }
-    if (hours > 0) {
-      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    return time;
+  };
+
+  const formatEndCountdown = () => {
+    if (!votingEndsAt) return '';
+    const diffMs = votingEndsAt.getTime() - now.getTime();
+    if (diffMs <= 0) return '00:00:00';
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    const time = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    if (days > 0) {
+      return `${days}d ${time}`;
     }
-    if (minutes > 0) {
-      return `${minutes} min${minutes !== 1 ? 's' : ''}`;
-    }
-    return 'less than a minute';
+    return time;
   };
 
   const handleVoteAction = async (option: number) => {
@@ -390,7 +404,13 @@ export default function PostCard({ post }) {
 
         {isBeforeVoting && (
           <div className="mb-4 p-3 bg-white border-4 border-black font-black text-center">
-            Voting opens in {formatCountdown()}
+            Voting opens in {formatStartCountdown()}
+          </div>
+        )}
+
+        {isVotingActive && votingEndsAt && (
+          <div className="mb-4 p-3 bg-white border-4 border-black font-black text-center">
+            Voting closes in {formatEndCountdown()}
           </div>
         )}
 

@@ -269,14 +269,15 @@ export default function Profile() {
       }
 
       const updates: any = {
+        user_id: user.id,
         job_title: adminJobTitleInput || null,
         organization: adminOrganizationInput || null,
+        role: "admin"
       };
 
       const { error } = await supabase
         .from("admins")
-        .update(updates)
-        .eq("user_id", user.id);
+        .upsert(updates, { onConflict: "user_id" });
 
       if (error) {
         setAdminError(error.message || "Failed to update admin details.");
