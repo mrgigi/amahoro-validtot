@@ -19,6 +19,12 @@ export default function Profile() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileGenderInput, setProfileGenderInput] = useState("");
+  const [profileCountryInput, setProfileCountryInput] = useState("");
+  const [profileCohortInput, setProfileCohortInput] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [adminJobTitle, setAdminJobTitle] = useState<string | null>(null);
   const [adminOrganization, setAdminOrganization] = useState<string | null>(null);
   const [isEditingAdmin, setIsEditingAdmin] = useState(false);
@@ -147,6 +153,71 @@ export default function Profile() {
   roles.push("Voter");
   const roleLabel = roles.join(", ");
 
+  const handleStartEditProfile = () => {
+    setProfileError(null);
+    setProfileGenderInput(profile.gender || "");
+    setProfileCountryInput(profile.country || "");
+    setProfileCohortInput(profile.cohort || "");
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEditProfile = () => {
+    setIsEditingProfile(false);
+    setProfileError(null);
+  };
+
+  const handleSaveProfileDetails = async () => {
+    setSavingProfile(true);
+    setProfileError(null);
+    try {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setProfileError("You must be signed in to update your profile.");
+        setSavingProfile(false);
+        return;
+      }
+
+      const updates: any = {
+        gender: profileGenderInput || null,
+        country: profileCountryInput || null,
+        cohort: profileCohortInput || null
+      };
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", user.id)
+        .select("id, username, created_at, gender, country, cohort")
+        .maybeSingle();
+
+      if (error) {
+        setProfileError(error.message || "Failed to update profile details.");
+        setSavingProfile(false);
+        return;
+      }
+
+      if (data) {
+        setProfile(data as ProfileRow);
+      } else if (profile) {
+        setProfile({
+          ...profile,
+          gender: updates.gender,
+          country: updates.country,
+          cohort: updates.cohort
+        });
+      }
+
+      setIsEditingProfile(false);
+    } catch (err: any) {
+      setProfileError(err.message || "Failed to update profile details.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const handleStartEditAdmin = () => {
     setAdminError(null);
     setAdminJobTitleInput(adminJobTitle ?? "");
@@ -260,6 +331,110 @@ export default function Profile() {
               </div>
             </div>
           </div>
+
+          <div className="mt-2 flex justify-end">
+            {!isEditingProfile && (
+              <button
+                type="button"
+                onClick={handleStartEditProfile}
+                className="px-3 py-1 text-xs font-black border-2 border-black bg-white"
+              >
+                Edit profile details
+              </button>
+            )}
+          </div>
+
+          {isEditingProfile && (
+            <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
+              {profileError && (
+                <div className="p-2 border-2 border-black bg-red-100 text-xs font-bold">
+                  {profileError}
+                </div>
+              )}
+              <div>
+                <div className="text-sm font-bold text-gray-600">Gender</div>
+                <div className="flex gap-4 mt-1">
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="edit-gender"
+                      value="male"
+                      checked={profileGenderInput === "male"}
+                      onChange={() => setProfileGenderInput("male")}
+                      className="w-4 h-4"
+                    />
+                    <span>Male</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="edit-gender"
+                      value="female"
+                      checked={profileGenderInput === "female"}
+                      onChange={() => setProfileGenderInput("female")}
+                      className="w-4 h-4"
+                    />
+                    <span>Female</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-bold text-gray-600">Country</div>
+                <input
+                  type="text"
+                  value={profileCountryInput}
+                  onChange={(e) => setProfileCountryInput(e.target.value)}
+                  className="w-full mt-1 p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                  placeholder="Enter your country"
+                />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-gray-600">Cohort</div>
+                <div className="flex gap-4 mt-1">
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="edit-cohort"
+                      value="1"
+                      checked={profileCohortInput === "1"}
+                      onChange={() => setProfileCohortInput("1")}
+                      className="w-4 h-4"
+                    />
+                    <span>Cohort 1</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input
+                      type="radio"
+                      name="edit-cohort"
+                      value="2"
+                      checked={profileCohortInput === "2"}
+                      onChange={() => setProfileCohortInput("2")}
+                      className="w-4 h-4"
+                    />
+                    <span>Cohort 2</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveProfileDetails}
+                  disabled={savingProfile}
+                  className="px-4 py-2 bg-[#00FF00] border-2 border-black font-black text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingProfile ? "Saving..." : "Save changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelEditProfile}
+                  disabled={savingProfile}
+                  className="px-4 py-2 bg-white border-2 border-black font-black text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {isAdmin && (
             <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
