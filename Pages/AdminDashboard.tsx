@@ -182,24 +182,105 @@ export default function AdminDashboard() {
 
       const { data: voteRows, error: votesError } = await supabase
         .from('votes')
-        .select('option_index')
+        .select('option_index, user_id, created_at')
         .eq('post_id', postId);
 
       if (votesError) {
         throw votesError;
       }
 
+      const uniqueUserIds = new Set<string>();
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+      const weekMs = 7 * dayMs;
+      let votesLast24h = 0;
+      let votesLast7d = 0;
+      let firstVoteTimestamp: number | null = null;
+      let lastVoteTimestamp: number | null = null;
+
       const voteCountsMap: Record<string, number> = {};
       for (const row of voteRows || []) {
         const index = (row as any).option_index ?? 0;
         const key = String(index);
         voteCountsMap[key] = (voteCountsMap[key] || 0) + 1;
+
+        const userId = (row as any).user_id as string | null;
+        if (userId) {
+          uniqueUserIds.add(userId);
+        }
+
+        const createdAtRaw = (row as any).created_at as string | null;
+        if (createdAtRaw) {
+          const ts = new Date(createdAtRaw).getTime();
+          if (!Number.isNaN(ts)) {
+            if (firstVoteTimestamp === null || ts < firstVoteTimestamp) {
+              firstVoteTimestamp = ts;
+            }
+            if (lastVoteTimestamp === null || ts > lastVoteTimestamp) {
+              lastVoteTimestamp = ts;
+            }
+            const diff = now - ts;
+            if (diff <= dayMs) {
+              votesLast24h += 1;
+            }
+            if (diff <= weekMs) {
+              votesLast7d += 1;
+            }
+          }
+        }
       }
 
       const voteCounts = Object.entries(voteCountsMap).map(([key, count]) => ({
         option_index: Number(key),
         count
       }));
+
+      const uniqueVoters = uniqueUserIds.size;
+
+      let byCountry: { label: string; count: number }[] = [];
+      let byAgeRange: { label: string; count: number }[] = [];
+      let byGender: { label: string; count: number }[] = [];
+
+      if (uniqueVoters > 0) {
+        const userIds = Array.from(uniqueUserIds);
+
+        const { data: voterProfiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, gender, country, age_range')
+          .in('id', userIds);
+
+        if (profilesError) {
+          throw profilesError;
+        }
+
+        const countryCounts: Record<string, number> = {};
+        const ageRangeCounts: Record<string, number> = {};
+        const genderCounts: Record<string, number> = {};
+
+        for (const profile of voterProfiles || []) {
+          const country = (profile as any).country || 'Not set';
+          const ageRange = (profile as any).age_range || 'Not set';
+          const rawGender = ((profile as any).gender || '') as string;
+          const normalizedGender =
+            rawGender.toLowerCase() === 'male' || rawGender.toLowerCase() === 'female'
+              ? rawGender
+              : 'Not set';
+
+          countryCounts[country] = (countryCounts[country] || 0) + 1;
+          ageRangeCounts[ageRange] = (ageRangeCounts[ageRange] || 0) + 1;
+          genderCounts[normalizedGender] = (genderCounts[normalizedGender] || 0) + 1;
+        }
+
+        byCountry = Object.entries(countryCounts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([label, count]) => ({ label, count }));
+        byAgeRange = Object.entries(ageRangeCounts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([label, count]) => ({ label, count }));
+        byGender = Object.entries(genderCounts)
+          .sort((a, b) => b[1] - a[1])
+          .map(([label, count]) => ({ label, count }));
+      }
 
       const { data: reportRows, error: reportsError } = await supabase
         .from('reports')
@@ -222,9 +303,82 @@ export default function AdminDashboard() {
         count
       }));
 
+      const { data: viewRows, error: viewsError } = await supabase
+        .from('post_views')
+        .select('user_id, created_at')
+        .eq('post_id', postId);
+
+      if (viewsError) {
+        throw viewsError;
+      }
+
+      const uniqueViewUserIds = new Set<string>();
+      let viewsLast24h = 0;
+      let viewsLast7d = 0;
+      let firstViewTimestamp: number | null = null;
+      let lastViewTimestamp: number | null = null;
+
+      for (const row of viewRows || []) {
+        const userId = (row as any).user_id as string | null;
+        if (userId) {
+          uniqueViewUserIds.add(userId);
+        }
+
+        const createdAtRaw = (row as any).created_at as string | null;
+        if (createdAtRaw) {
+          const ts = new Date(createdAtRaw).getTime();
+          if (!Number.isNaN(ts)) {
+            if (firstViewTimestamp === null || ts < firstViewTimestamp) {
+              firstViewTimestamp = ts;
+            }
+            if (lastViewTimestamp === null || ts > lastViewTimestamp) {
+              lastViewTimestamp = ts;
+            }
+            const diff = now - ts;
+            if (diff <= dayMs) {
+              viewsLast24h += 1;
+            }
+            if (diff <= weekMs) {
+              viewsLast7d += 1;
+            }
+          }
+        }
+      }
+
+      const totalViews = (viewRows || []).length;
+      const uniqueViewers = uniqueViewUserIds.size;
+
+      const voterToViewerRate =
+        uniqueViewers > 0 ? uniqueVoters / uniqueViewers : null;
+
       return {
         votesByOption: voteCounts,
-        reportsByReason: reportCounts
+        reportsByReason: reportCounts,
+        uniqueVoters,
+        timeStats: {
+          votesLast24h,
+          votesLast7d,
+          firstVoteAt: firstVoteTimestamp !== null ? new Date(firstVoteTimestamp).toISOString() : null,
+          lastVoteAt: lastVoteTimestamp !== null ? new Date(lastVoteTimestamp).toISOString() : null
+        },
+        demographics: {
+          byCountry,
+          byAgeRange,
+          byGender
+        },
+        views: {
+          totalViews,
+          uniqueViewers,
+          viewsLast24h,
+          viewsLast7d,
+          firstViewAt: firstViewTimestamp !== null ? new Date(firstViewTimestamp).toISOString() : null,
+          lastViewAt: lastViewTimestamp !== null ? new Date(lastViewTimestamp).toISOString() : null
+        },
+        conversion: {
+          voterToViewerRate,
+          voters: uniqueVoters,
+          viewers: uniqueViewers
+        }
       };
     },
     enabled: !!currentUser && !!selectedPostId
@@ -232,6 +386,16 @@ export default function AdminDashboard() {
 
   const analyticsVotes = (postAnalytics as any)?.votesByOption || [];
   const analyticsReports = (postAnalytics as any)?.reportsByReason || [];
+  const uniqueAnalyticsVoters = (postAnalytics as any)?.uniqueVoters || 0;
+  const analyticsTimeStats = (postAnalytics as any)?.timeStats || {};
+  const analyticsDemographics = (postAnalytics as any)?.demographics || {};
+  const analyticsByCountry = (analyticsDemographics as any).byCountry || [];
+  const analyticsByAgeRange = (analyticsDemographics as any).byAgeRange || [];
+  const analyticsByGender = (analyticsDemographics as any).byGender || [];
+  const analyticsVotesLast24h = (analyticsTimeStats as any).votesLast24h || 0;
+  const analyticsVotesLast7d = (analyticsTimeStats as any).votesLast7d || 0;
+  const analyticsFirstVoteAt = (analyticsTimeStats as any).firstVoteAt || null;
+  const analyticsLastVoteAt = (analyticsTimeStats as any).lastVoteAt || null;
   const totalAnalyticsVotes = (analyticsVotes as any[]).reduce(
     (sum, row: any) => sum + (row.count || 0),
     0
@@ -240,6 +404,18 @@ export default function AdminDashboard() {
     (sum, row: any) => sum + (row.count || 0),
     0
   );
+
+  const analyticsViews = (postAnalytics as any)?.views || {};
+  const analyticsTotalViews = (analyticsViews as any).totalViews || 0;
+  const analyticsUniqueViewers = (analyticsViews as any).uniqueViewers || 0;
+  const analyticsViewsLast24h = (analyticsViews as any).viewsLast24h || 0;
+  const analyticsViewsLast7d = (analyticsViews as any).viewsLast7d || 0;
+
+  const analyticsConversion = (postAnalytics as any)?.conversion || {};
+  const analyticsVoterToViewerRate =
+    typeof (analyticsConversion as any).voterToViewerRate === 'number'
+      ? (analyticsConversion as any).voterToViewerRate
+      : null;
 
   const { data: postsCount = 0 } = useQuery({
     queryKey: ['stats', 'posts_count'],
@@ -953,6 +1129,107 @@ export default function AdminDashboard() {
                       })
                     )}
                   </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="text-lg font-black mb-2">Voter stats</div>
+                  <div className="space-y-1 text-sm font-bold">
+                    <div>Total unique voters: {uniqueAnalyticsVoters}</div>
+                    <div>Total votes counted: {totalAnalyticsVotes}</div>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="text-lg font-black mb-2">Views and conversion</div>
+                  <div className="space-y-1 text-sm font-bold">
+                    <div>Total views (signed-in): {analyticsTotalViews}</div>
+                    <div>Total unique viewers: {analyticsUniqueViewers}</div>
+                    <div>Views in last 24 hours: {analyticsViewsLast24h}</div>
+                    <div>Views in last 7 days: {analyticsViewsLast7d}</div>
+                    {analyticsVoterToViewerRate !== null && (
+                      <div>
+                        Voter-to-viewer conversion:{' '}
+                        {(analyticsVoterToViewerRate * 100).toFixed(1)}%
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="text-lg font-black mb-2">Voter demographics</div>
+                  {uniqueAnalyticsVoters === 0 ? (
+                    <div className="py-2 text-sm font-bold text-gray-500">
+                      No voter demographics yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-3 text-xs font-bold text-gray-700">
+                      <div>
+                        <div className="mb-1">By country</div>
+                        {(analyticsByCountry as any[]).length === 0 ? (
+                          <div className="text-gray-500">No data.</div>
+                        ) : (
+                          (analyticsByCountry as any[]).map((row: any) => (
+                            <div key={row.label} className="flex justify-between">
+                              <span>{row.label}</span>
+                              <span>{row.count}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <div>
+                        <div className="mb-1">By age range</div>
+                        {(analyticsByAgeRange as any[]).length === 0 ? (
+                          <div className="text-gray-500">No data.</div>
+                        ) : (
+                          (analyticsByAgeRange as any[]).map((row: any) => (
+                            <div key={row.label} className="flex justify-between">
+                              <span>{row.label}</span>
+                              <span>{row.count}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <div>
+                        <div className="mb-1">By gender</div>
+                        {(analyticsByGender as any[]).length === 0 ? (
+                          <div className="text-gray-500">No data.</div>
+                        ) : (
+                          (analyticsByGender as any[]).map((row: any) => (
+                            <div key={row.label} className="flex justify-between">
+                              <span>{row.label}</span>
+                              <span>{row.count}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <div className="text-lg font-black mb-2">Voting over time</div>
+                  {totalAnalyticsVotes === 0 ? (
+                    <div className="py-2 text-sm font-bold text-gray-500">
+                      No votes yet for this post.
+                    </div>
+                  ) : (
+                    <div className="space-y-1 text-sm font-bold text-gray-700">
+                      <div>Votes in last 24 hours: {analyticsVotesLast24h}</div>
+                      <div>Votes in last 7 days: {analyticsVotesLast7d}</div>
+                      {analyticsFirstVoteAt && (
+                        <div>
+                          First vote:{' '}
+                          {new Date(analyticsFirstVoteAt as string).toLocaleString()}
+                        </div>
+                      )}
+                      {analyticsLastVoteAt && (
+                        <div>
+                          Most recent vote:{' '}
+                          {new Date(analyticsLastVoteAt as string).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-4">

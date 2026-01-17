@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Share2, MoreVertical, Eye, Check, Lock } from 'lucide-react';
 import ImageViewer from './ImageViewer';
 import VoteInterface from './VoteInterface';
@@ -13,9 +13,10 @@ type PostCardProps = {
   post: any;
   disableVoting?: boolean;
   disableShare?: boolean;
+  disableViewTracking?: boolean;
 };
 
-export default function PostCard({ post, disableVoting, disableShare }: PostCardProps) {
+export default function PostCard({ post, disableVoting, disableShare, disableViewTracking }: PostCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [anonymousId, setAnonymousId] = useState('');
@@ -29,10 +30,14 @@ export default function PostCard({ post, disableVoting, disableShare }: PostCard
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const [now, setNow] = useState(() => new Date());
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
+  const [hasTrackedView, setHasTrackedView] = useState(false);
 
   const optionColors = ['#FF006E', '#0066FF', '#FFFF00'];
   const optionTextColors = ['text-white', 'text-white', 'text-black'];
@@ -74,6 +79,7 @@ export default function PostCard({ post, disableVoting, disableShare }: PostCard
 
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        setCurrentUserId(user ? user.id : null);
 
         let query = supabase
           .from('votes')
@@ -125,6 +131,82 @@ export default function PostCard({ post, disableVoting, disableShare }: PostCard
     };
     loadUser();
   }, [post.created_by]);
+
+  useEffect(() => {
+    if (disableViewTracking) {
+      return;
+    }
+
+    const element = rootRef.current;
+    if (!element || hasBeenVisible) {
+      return;
+    }
+
+    if (typeof window === 'undefined' || !(window as any).IntersectionObserver) {
+      setHasBeenVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          setHasBeenVisible(true);
+          break;
+        }
+      }
+    }, { threshold: 0.5 });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [disableViewTracking, hasBeenVisible]);
+
+  useEffect(() => {
+    if (disableViewTracking) {
+      return;
+    }
+    if (!hasBeenVisible) {
+      return;
+    }
+    if (!currentUserId) {
+      return;
+    }
+    if (hasTrackedView) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const recordView = async () => {
+      try {
+        const { error } = await supabase
+          .from('post_views')
+          .insert({
+            post_id: post.id,
+            user_id: currentUserId
+          });
+
+        if (error && (error as any).code !== '23505') {
+          console.error('Error recording view:', error);
+          return;
+        }
+
+        if (!cancelled) {
+          setHasTrackedView(true);
+        }
+      } catch (error) {
+        console.error('Error recording view:', error);
+      }
+    };
+
+    recordView();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [disableViewTracking, hasBeenVisible, currentUserId, hasTrackedView, post.id]);
 
   const voteMutation = useMutation({
     mutationFn: async ({ optionIndex, userId }: { optionIndex: number, userId: string }) => {
@@ -408,7 +490,7 @@ export default function PostCard({ post, disableVoting, disableShare }: PostCard
   const isLocked = isPrivate && !isUnlocked;
 
   return (
-    <div className="w-full bg-[#F5F5F5]">
+    <div ref={rootRef} className="w-full bg-[#F5F5F5]">
       <div className="max-w-2xl mx-auto p-4 pb-8 pt-4">
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
