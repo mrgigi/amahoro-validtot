@@ -199,35 +199,46 @@ export default function AdminDashboard() {
       let lastVoteTimestamp: number | null = null;
 
       const voteCountsMap: Record<string, number> = {};
-      for (const row of voteRows || []) {
-        const index = (row as any).option_index ?? 0;
-        const key = String(index);
-        voteCountsMap[key] = (voteCountsMap[key] || 0) + 1;
 
-        const userId = (row as any).user_id as string | null;
-        if (userId) {
-          uniqueUserIds.add(userId);
-        }
+      if (voteRows && voteRows.length > 0) {
+        for (const row of voteRows) {
+          const index = (row as any).option_index ?? 0;
+          const key = String(index);
+          voteCountsMap[key] = (voteCountsMap[key] || 0) + 1;
 
-        const createdAtRaw = (row as any).created_at as string | null;
-        if (createdAtRaw) {
-          const ts = new Date(createdAtRaw).getTime();
-          if (!Number.isNaN(ts)) {
-            if (firstVoteTimestamp === null || ts < firstVoteTimestamp) {
-              firstVoteTimestamp = ts;
-            }
-            if (lastVoteTimestamp === null || ts > lastVoteTimestamp) {
-              lastVoteTimestamp = ts;
-            }
-            const diff = now - ts;
-            if (diff <= dayMs) {
-              votesLast24h += 1;
-            }
-            if (diff <= weekMs) {
-              votesLast7d += 1;
+          const userId = (row as any).user_id as string | null;
+          if (userId) {
+            uniqueUserIds.add(userId);
+          }
+
+          const createdAtRaw = (row as any).created_at as string | null;
+          if (createdAtRaw) {
+            const ts = new Date(createdAtRaw).getTime();
+            if (!Number.isNaN(ts)) {
+              if (firstVoteTimestamp === null || ts < firstVoteTimestamp) {
+                firstVoteTimestamp = ts;
+              }
+              if (lastVoteTimestamp === null || ts > lastVoteTimestamp) {
+                lastVoteTimestamp = ts;
+              }
+              const diff = now - ts;
+              if (diff <= dayMs) {
+                votesLast24h += 1;
+              }
+              if (diff <= weekMs) {
+                votesLast7d += 1;
+              }
             }
           }
         }
+      } else if (selectedPostForAnalytics && Array.isArray((selectedPostForAnalytics as any).votes)) {
+        const votesArray = (selectedPostForAnalytics as any).votes as number[];
+        votesArray.forEach((count, index) => {
+          if (typeof count === 'number' && count > 0) {
+            const key = String(index);
+            voteCountsMap[key] = (voteCountsMap[key] || 0) + count;
+          }
+        });
       }
 
       const voteCounts = Object.entries(voteCountsMap).map(([key, count]) => ({
@@ -235,13 +246,20 @@ export default function AdminDashboard() {
         count
       }));
 
-      const uniqueVoters = uniqueUserIds.size;
+      let uniqueVoters = uniqueUserIds.size;
+
+      if (uniqueVoters === 0 && selectedPostForAnalytics) {
+        const totalVotesFromPost = (selectedPostForAnalytics as any).total_votes;
+        if (typeof totalVotesFromPost === 'number' && totalVotesFromPost > 0) {
+          uniqueVoters = totalVotesFromPost;
+        }
+      }
 
       let byCountry: { label: string; count: number }[] = [];
       let byAgeRange: { label: string; count: number }[] = [];
       let byGender: { label: string; count: number }[] = [];
 
-      if (uniqueVoters > 0) {
+      if (uniqueUserIds.size > 0) {
         const userIds = Array.from(uniqueUserIds);
 
         const { data: voterProfiles, error: profilesError } = await supabase

@@ -50,6 +50,8 @@ export default function CommentSection({ post }: { post: any }) {
     enabled: showComments
   });
 
+  const commentCount = Math.max(post.comment_count || 0, comments.length);
+
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, userId }: { content: string; userId: string }) => {
       let authorName = ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
@@ -76,7 +78,7 @@ export default function CommentSection({ post }: { post: any }) {
       const { error: updateError } = await supabase
         .from('posts')
         .update({
-          comment_count: (post.comment_count || 0) + 1
+          comment_count: commentCount + 1
         })
         .eq('id', postId);
 
@@ -120,7 +122,7 @@ export default function CommentSection({ post }: { post: any }) {
       await supabase
         .from('posts')
         .update({
-          comment_count: Math.max((post.comment_count || 1) - 1, 0)
+          comment_count: Math.max(commentCount - 1, 0)
         })
         .eq('id', postId);
     },
@@ -167,7 +169,7 @@ export default function CommentSection({ post }: { post: any }) {
         <MessageCircle className="w-5 h-5" />
         {showComments
           ? 'Hide comments'
-          : `${post.comment_count || 0} comment${(post.comment_count || 0) !== 1 ? 's' : ''} • Tap to view`}
+          : `${commentCount} comment${commentCount !== 1 ? 's' : ''} • Tap to view`}
       </button>
 
       {showComments && (
