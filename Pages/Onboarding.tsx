@@ -129,6 +129,20 @@ export default function Onboarding() {
         throw authError;
       }
 
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data: verifiedProfile, error: verifyError } = await supabase
+          .from("profiles")
+          .select("gender, country")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!verifyError && verifiedProfile && verifiedProfile.gender && verifiedProfile.country) {
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
       navigate(createPageUrl("Feed"), { replace: true });
     } catch (err: any) {
       setError(err.message || "Failed to save your details. Please try again.");

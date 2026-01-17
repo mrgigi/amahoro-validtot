@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Upload, X, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
+import PostCard from '../Components/PostCard';
 
 const MAX_IMAGE_DIMENSION = 1600;
 const MAX_UNCOMPRESSED_BYTES = 1.5 * 1024 * 1024;
@@ -416,50 +417,6 @@ export default function CreatePost() {
             )}
           </div>
 
-          {images.length >= 2 && (
-            <div className="border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 space-y-3">
-              <div className="text-xs font-black text-gray-600">Preview</div>
-              <div className="text-3xl md:text-4xl font-black leading-tight transform -rotate-1">
-                {title || (options.length ? options.join(' or ') : 'Your question will show here')}
-              </div>
-              <div
-                className={`grid gap-3 ${
-                  images.length === 1 ? 'grid-cols-1' :
-                  images.length === 2 ? 'grid-cols-2' :
-                  'grid-cols-2'
-                }`}
-              >
-                {images.map((img, index) => {
-                  const colors = ['#FF006E', '#0066FF', '#FFFF00'];
-                  const textColors = ['text-white', 'text-white', 'text-black'];
-                  const optionColor = colors[index % colors.length];
-                  const optionTextClass = textColors[index % textColors.length];
-                  const optionLabel = String.fromCharCode(65 + index);
-                  return (
-                    <div
-                      key={index}
-                      className={`relative ${
-                        images.length === 3 && index === 0 ? 'col-span-2' : ''
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-40 object-cover border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                      />
-                      <div
-                        className={`absolute top-2 left-2 z-10 px-2 py-0.5 border-4 border-black font-black text-[10px] md:text-xs rounded-sm ${optionTextClass}`}
-                        style={{ backgroundColor: optionColor }}
-                      >
-                        {optionLabel}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div>
             <button
               type="button"
@@ -503,7 +460,7 @@ export default function CreatePost() {
                       <label className="block text-sm font-bold">
                         Access code you will share with your community
                       </label>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <input
                           type="text"
                           value={accessCode}
@@ -520,14 +477,14 @@ export default function CreatePost() {
                         <button
                           type="button"
                           onClick={handleGenerateCode}
-                          className="px-4 py-3 border-4 border-black bg-black text-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                          className="px-4 py-3 border-4 border-black bg-black text-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap sm:w-auto w-full"
                         >
                           AUTO
                         </button>
                         <button
                           type="button"
                           onClick={handleCopyCode}
-                          className="px-4 py-3 border-4 border-black bg-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                          className="px-4 py-3 border-4 border-black bg-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap sm:w-auto w-full"
                         >
                           COPY
                         </button>
@@ -596,7 +553,13 @@ export default function CreatePost() {
           <div className="flex flex-col md:flex-row gap-3">
             <button
               type="button"
-              onClick={() => setShowPreviewModal(true)}
+              onClick={() => {
+                if (images.length < 2) {
+                  alert('Add at least 2 images to preview your campaign.');
+                  return;
+                }
+                setShowPreviewModal(true);
+              }}
               disabled={uploading}
               className="w-full md:w-1/2 p-6 bg-white border-4 border-black font-black text-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -625,75 +588,54 @@ export default function CreatePost() {
             </button>
 
             <div className="text-xs font-black text-gray-600">Campaign preview</div>
-            <div className="text-3xl md:text-4xl font-black leading-tight transform -rotate-1">
-              {title || (options.length ? options.join(' or ') : 'Your question will show here')}
-            </div>
-
             {images.length >= 2 && (
-              <div
-                className={`grid gap-3 ${
-                  images.length === 1 ? 'grid-cols-1' :
-                  images.length === 2 ? 'grid-cols-2' :
-                  'grid-cols-2'
-                }`}
-              >
-                {images.map((img, index) => {
-                  const colors = ['#FF006E', '#0066FF', '#FFFF00'];
-                  const textColors = ['text-white', 'text-white', 'text-black'];
-                  const optionColor = colors[index % colors.length];
-                  const optionTextClass = textColors[index % textColors.length];
-                  const optionLabel = String.fromCharCode(65 + index);
-                  return (
-                    <div
-                      key={index}
-                      className={`relative ${
-                        images.length === 3 && index === 0 ? 'col-span-2' : ''
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-48 object-cover border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                      />
-                      <div
-                        className={`absolute top-2 left-2 z-10 px-2 py-0.5 border-4 border-black font-black text-[10px] md:text-xs rounded-sm ${optionTextClass}`}
-                        style={{ backgroundColor: optionColor }}
-                      >
-                        {optionLabel}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <PostCard
+                post={{
+                  id: 'preview-' + Date.now().toString(),
+                  type: 'comparison',
+                  title: title || (options.length ? options.join(' or ') : 'Your question will show here'),
+                  images,
+                  options: options.length ? options : images.map((_, index) => `Option ${String.fromCharCode(65 + index)}`),
+                  votes: new Array(images.length).fill(0),
+                  total_votes: 0,
+                  comment_count: 0,
+                  created_by: 'preview',
+                  is_private: isPrivate,
+                  access_code: isPrivate ? accessCode.trim() || null : null,
+                  voting_starts_at: (() => {
+                    if (!enableTimedVoting) return null;
+                    if (!votingStartsAt || !votingEndsAt) return null;
+                    const start = new Date(votingStartsAt);
+                    const end = new Date(votingEndsAt);
+                    if (
+                      Number.isNaN(start.getTime()) ||
+                      Number.isNaN(end.getTime()) ||
+                      end <= start
+                    ) {
+                      return null;
+                    }
+                    return start.toISOString();
+                  })(),
+                  voting_ends_at: (() => {
+                    if (!enableTimedVoting) return null;
+                    if (!votingStartsAt || !votingEndsAt) return null;
+                    const start = new Date(votingStartsAt);
+                    const end = new Date(votingEndsAt);
+                    if (
+                      Number.isNaN(start.getTime()) ||
+                      Number.isNaN(end.getTime()) ||
+                      end <= start
+                    ) {
+                      return null;
+                    }
+                    return end.toISOString();
+                  })(),
+                  is_hidden: false
+                }}
+                disableVoting
+                disableShare
+              />
             )}
-
-            <div className="border-t-4 border-black pt-4 space-y-2 text-sm font-bold">
-              <div>
-                Visibility:{' '}
-                {isPrivate
-                  ? `Private (code: ${accessCode.trim() || 'not set'})`
-                  : 'Public'}
-              </div>
-              <div>
-                Timed voting:{' '}
-                {enableTimedVoting
-                  ? (() => {
-                      if (!votingStartsAt || !votingEndsAt) {
-                        return 'Enabled, but start/end times not set';
-                      }
-                      const start = new Date(votingStartsAt);
-                      const end = new Date(votingEndsAt);
-                      if (
-                        Number.isNaN(start.getTime()) ||
-                        Number.isNaN(end.getTime())
-                      ) {
-                        return 'Enabled, but dates are not valid yet';
-                      }
-                      return `Opens ${start.toLocaleString()} · Closes ${end.toLocaleString()}`;
-                    })()
-                  : 'Always open for voting'}
-              </div>
-            </div>
           </div>
         </div>
       )}

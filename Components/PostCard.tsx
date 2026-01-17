@@ -9,7 +9,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '../src/lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-export default function PostCard({ post }) {
+type PostCardProps = {
+  post: any;
+  disableVoting?: boolean;
+  disableShare?: boolean;
+};
+
+export default function PostCard({ post, disableVoting, disableShare }: PostCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [anonymousId, setAnonymousId] = useState('');
@@ -354,6 +360,10 @@ export default function PostCard({ post }) {
   };
 
   const handleVoteAction = async (option: number) => {
+    if (disableVoting) {
+      alert('This is a preview. Voting is disabled until you post this campaign.');
+      return;
+    }
     if (!isVotingActive) {
       alert('Voting is not active for this campaign.');
       return;
@@ -557,14 +567,15 @@ export default function PostCard({ post }) {
           />
         )}
 
-        {/* Share Button */}
-        <button
-          onClick={handleShare}
-          className="w-full mt-4 p-4 bg-[#FFFF00] border-4 border-black font-black text-lg flex items-center justify-center gap-2 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
-        >
-          <Share2 className="w-5 h-5" />
-          SHARE
-        </button>
+        {!disableShare && (
+          <button
+            onClick={handleShare}
+            className="w-full mt-4 p-4 bg-[#FFFF00] border-4 border-black font-black text-lg flex items-center justify-center gap-2 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+          >
+            <Share2 className="w-5 h-5" />
+            SHARE
+          </button>
+        )}
 
         {hasVoted && !isLocked && <CommentSection post={post} />}
 
