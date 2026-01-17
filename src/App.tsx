@@ -29,6 +29,71 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function OnboardingGate({
+  children,
+  user
+}: {
+  children: React.ReactNode;
+  user: any | null;
+}) {
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const location = useLocation();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkOnboarding = async () => {
+      if (!user) {
+        if (!isMounted) return;
+        setNeedsOnboarding(false);
+        setChecking(false);
+        return;
+      }
+
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("gender, country")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!isMounted) return;
+
+        const needs =
+          !profile || !profile.gender || !profile.country;
+
+        setNeedsOnboarding(needs);
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        if (!isMounted) return;
+        setNeedsOnboarding(false);
+      } finally {
+        if (isMounted) {
+          setChecking(false);
+        }
+      }
+    };
+
+    setChecking(true);
+    checkOnboarding();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, location.pathname]);
+
+  if (needsOnboarding && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (checking) {
+    return <>{children}</>;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,39 +171,41 @@ export default function App() {
 
   return (
     <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Feed />} />
-        <Route path="/auth" element={<Auth />} />
-        
-        {/* Protected Routes */}
-        <Route path="/create-post" element={
-          <ProtectedRoute>
-            <CreatePost />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
+      <OnboardingGate user={user}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Feed />} />
+          <Route path="/auth" element={<Auth />} />
+          
+          {/* Protected Routes */}
+          <Route path="/create-post" element={
+            <ProtectedRoute>
+              <CreatePost />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/onboarding" element={
-          <ProtectedRoute>
-            <Onboarding />
-          </ProtectedRoute>
-        } />
+          <Route path="/onboarding" element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          } />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </OnboardingGate>
     </Router>
   );
 }
