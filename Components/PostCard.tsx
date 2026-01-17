@@ -23,6 +23,7 @@ export default function PostCard({ post }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const [now, setNow] = useState(() => new Date());
 
   const optionColors = ['#FF006E', '#0066FF', '#FFFF00'];
   const optionTextColors = ['text-white', 'text-white', 'text-black'];
@@ -30,6 +31,15 @@ export default function PostCard({ post }) {
   useEffect(() => {
     setIsUnlocked(!post.is_private);
   }, [post.id, post.is_private]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => {
+      clearInterval(id);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -220,7 +230,49 @@ export default function PostCard({ post }) {
     alert('Report submitted. Thanks for keeping ValidToT safe!');
   };
 
+  const votingStartsAt = post.voting_starts_at ? new Date(post.voting_starts_at) : null;
+  const votingEndsAt = post.voting_ends_at ? new Date(post.voting_ends_at) : null;
+
+  let votingState: 'always_active' | 'countdown' | 'active' | 'closed' = 'always_active';
+  if (votingStartsAt || votingEndsAt) {
+    if (votingStartsAt && now < votingStartsAt) {
+      votingState = 'countdown';
+    } else if (votingEndsAt && now > votingEndsAt) {
+      votingState = 'closed';
+    } else {
+      votingState = 'active';
+    }
+  }
+
+  const isBeforeVoting = votingState === 'countdown';
+  const isAfterVoting = votingState === 'closed';
+  const isVotingActive = votingState === 'active' || votingState === 'always_active';
+
+  const formatCountdown = () => {
+    if (!votingStartsAt) return '';
+    const diffMs = votingStartsAt.getTime() - now.getTime();
+    if (diffMs <= 0) return 'a moment';
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (days > 0) {
+      return `${days} day${days !== 1 ? 's' : ''}`;
+    }
+    if (hours > 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    if (minutes > 0) {
+      return `${minutes} min${minutes !== 1 ? 's' : ''}`;
+    }
+    return 'less than a minute';
+  };
+
   const handleVoteAction = async (option: number) => {
+    if (!isVotingActive) {
+      alert('Voting is not active for this campaign.');
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate('/auth', { state: { from: location } });
@@ -336,19 +388,38 @@ export default function PostCard({ post }) {
           })}
         </div>
 
-        {!isLocked && !hasVoted && (
+        {isBeforeVoting && (
+          <div className="mb-4 p-3 bg-white border-4 border-black font-black text-center">
+            Voting opens in {formatCountdown()}
+          </div>
+        )}
+
+        {isVotingActive && !isLocked && !hasVoted && (
           <div className="mb-4 p-3 bg-white border-4 border-black font-bold text-center">
             {`${post.total_votes || 0} vote${(post.total_votes || 0) !== 1 ? 's' : ''}`} • {post.comment_count || 0} comment{(post.comment_count || 0) !== 1 ? 's' : ''}
           </div>
         )}
 
-        {!isLocked && !hasVoted && (
+        {isVotingActive && !isLocked && !hasVoted && (
           <div className="mb-4 p-3 bg-black text-[#FFFF00] border-4 border-black font-black text-center text-sm md:text-base">
             Vote once to unlock live results. Your vote cannot be changed.
           </div>
         )}
 
-        {isLocked ? (
+        {isAfterVoting && (
+          <div className="mb-4 p-3 bg-white border-4 border-black font-black text-center">
+            Voting closed
+          </div>
+        )}
+
+        {isBeforeVoting ? null : isAfterVoting ? (
+          <VoteInterface
+            post={post}
+            onVote={async () => {}}
+            hasVoted={true}
+            userVote={userVote}
+          />
+        ) : isLocked ? (
           <div className="mb-4 p-3 bg-white border-4 border-black">
             {unlockError && (
               <div className="mb-2 text-xs font-bold text-red-600">
@@ -381,8 +452,7 @@ export default function PostCard({ post }) {
             hasVoted={hasVoted}
             userVote={userVote}
           />
-        )
-        }
+        )}
 
         {/* Share Button */}
         <button

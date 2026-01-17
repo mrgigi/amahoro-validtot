@@ -17,6 +17,10 @@ export default function CreatePost() {
   const [hasCopiedCode, setHasCopiedCode] = useState(false);
   const [showCopyWarning, setShowCopyWarning] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [enableTimedVoting, setEnableTimedVoting] = useState(false);
+  const [votingStartsAt, setVotingStartsAt] = useState('');
+  const [votingEndsAt, setVotingEndsAt] = useState('');
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: any) => {
@@ -153,6 +157,23 @@ export default function CreatePost() {
       }
     }
 
+    if (enableTimedVoting) {
+      if (!votingStartsAt || !votingEndsAt) {
+        alert('Set both start and end time for timed voting, or turn it off.');
+        return;
+      }
+      const start = new Date(votingStartsAt);
+      const end = new Date(votingEndsAt);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        alert('Enter valid dates for voting start and end.');
+        return;
+      }
+      if (end <= start) {
+        alert('Voting end time must be after start time.');
+        return;
+      }
+    }
+
     const {
       data: { user }
     } = await supabase.auth.getUser();
@@ -169,12 +190,21 @@ export default function CreatePost() {
       comment_count: 0,
       created_by: user.id,
       is_private: isPrivate,
-      access_code: isPrivate ? accessCode.trim() : null
+      access_code: isPrivate ? accessCode.trim() : null,
+      voting_starts_at: null,
+      voting_ends_at: null
     };
 
     postData.options = options;
     postData.votes = new Array(images.length).fill(0);
     postData.total_votes = 0;
+
+    if (enableTimedVoting) {
+      const start = new Date(votingStartsAt);
+      const end = new Date(votingEndsAt);
+      postData.voting_starts_at = start.toISOString();
+      postData.voting_ends_at = end.toISOString();
+    }
 
     createPostMutation.mutate(postData);
   };
@@ -360,6 +390,55 @@ export default function CreatePost() {
                   <div className="text-xs font-bold text-red-600 mt-1">
                     Don't forget to tap COPY and save this code. Without it, voters can't unlock your post.
                   </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center justify-between p-3 border-4 border-black bg-white font-black text-sm"
+            >
+              <span>Advanced settings</span>
+              <span>{showAdvanced ? 'Hide' : 'Show'}</span>
+            </button>
+            {showAdvanced && (
+              <div className="mt-3 p-4 border-4 border-black bg-white space-y-3">
+                <label className="flex items-center gap-2 font-bold text-sm">
+                  <input
+                    type="checkbox"
+                    checked={enableTimedVoting}
+                    onChange={(e) => setEnableTimedVoting(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <span>Enable timed voting</span>
+                </label>
+                {enableTimedVoting && (
+                  <>
+                    <div>
+                      <div className="text-xs font-bold mb-1">Voting starts</div>
+                      <input
+                        type="datetime-local"
+                        value={votingStartsAt}
+                        onChange={(e) => setVotingStartsAt(e.target.value)}
+                        className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold mb-1">Voting ends</div>
+                      <input
+                        type="datetime-local"
+                        value={votingEndsAt}
+                        onChange={(e) => setVotingEndsAt(e.target.value)}
+                        className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                      />
+                    </div>
+                    <div className="text-[11px] font-bold text-gray-600">
+                      Times use your local timezone. Campaigns are only open for voting between these times.
+                    </div>
+                  </>
                 )}
               </div>
             )}

@@ -55,6 +55,14 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the post is hidden by admin"
+    },
+    "voting_starts_at": {
+      "type": "string",
+      "description": "Timestamp when voting opens (optional)"
+    },
+    "voting_ends_at": {
+      "type": "string",
+      "description": "Timestamp when voting closes (optional)"
     }
   },
   "required": [
