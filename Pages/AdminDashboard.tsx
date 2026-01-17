@@ -231,14 +231,21 @@ export default function AdminDashboard() {
             }
           }
         }
-      } else if (selectedPostForAnalytics && Array.isArray((selectedPostForAnalytics as any).votes)) {
-        const votesArray = (selectedPostForAnalytics as any).votes as number[];
-        votesArray.forEach((count, index) => {
-          if (typeof count === 'number' && count > 0) {
-            const key = String(index);
-            voteCountsMap[key] = (voteCountsMap[key] || 0) + count;
+      } else if (selectedPostForAnalytics) {
+        if (Array.isArray((selectedPostForAnalytics as any).votes)) {
+          const votesArray = (selectedPostForAnalytics as any).votes as number[];
+          votesArray.forEach((count, index) => {
+            if (typeof count === 'number' && count > 0) {
+              const key = String(index);
+              voteCountsMap[key] = (voteCountsMap[key] || 0) + count;
+            }
+          });
+        } else {
+          const totalFromPost = (selectedPostForAnalytics as any).total_votes;
+          if (typeof totalFromPost === 'number' && totalFromPost > 0) {
+            voteCountsMap['0'] = (voteCountsMap['0'] || 0) + totalFromPost;
           }
-        });
+        }
       }
 
       const voteCounts = Object.entries(voteCountsMap).map(([key, count]) => ({
@@ -414,10 +421,14 @@ export default function AdminDashboard() {
   const analyticsVotesLast7d = (analyticsTimeStats as any).votesLast7d || 0;
   const analyticsFirstVoteAt = (analyticsTimeStats as any).firstVoteAt || null;
   const analyticsLastVoteAt = (analyticsTimeStats as any).lastVoteAt || null;
-  const totalAnalyticsVotes = (analyticsVotes as any[]).reduce(
+  const totalAnalyticsVotesFromRows = (analyticsVotes as any[]).reduce(
     (sum, row: any) => sum + (row.count || 0),
     0
   );
+  const totalAnalyticsVotes =
+    totalAnalyticsVotesFromRows ||
+    (selectedPostForAnalytics as any)?.total_votes ||
+    0;
   const totalAnalyticsReports = (analyticsReports as any[]).reduce(
     (sum, row: any) => sum + (row.count || 0),
     0
