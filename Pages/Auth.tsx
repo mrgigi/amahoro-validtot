@@ -222,6 +222,13 @@ export default function Auth() {
   const allowedReturnPaths = ["/create-post", "/admin"];
   const defaultAfterLogin = "/";
 
+  const passwordIsStrongEnough = (value: string) => {
+    if (value.length < 8) return false;
+    const hasLetter = /[A-Za-z]/.test(value);
+    const hasNumber = /[0-9]/.test(value);
+    return hasLetter && hasNumber;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -234,6 +241,9 @@ export default function Auth() {
       }
 
       if (mode === "signup") {
+        if (!passwordIsStrongEnough(password)) {
+          throw new Error("Password must be at least 8 characters and include a letter and a number.");
+        }
         if (authRole === "admin") {
           if (!jobTitle.trim()) {
             throw new Error("Please enter your job title or role to sign up as an Admin.");

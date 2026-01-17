@@ -177,6 +177,14 @@ export default function Profile() {
   roles.push("Voter");
   const roleLabel = roles.join(", ");
 
+  const formatGender = (value?: string | null) => {
+    if (!value) return "Not set";
+    const lower = value.toLowerCase();
+    if (lower === "male") return "Male";
+    if (lower === "female") return "Female";
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
   const handleStartEditProfile = () => {
     setProfileError(null);
     setProfileGenderInput(profile.gender || "");
@@ -338,10 +346,10 @@ export default function Profile() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <div className="text-sm font-bold text-gray-600">Gender</div>
-              <div className="font-bold">
-                {profile.gender || "Not set"}
-              </div>
+            <div className="text-sm font-bold text-gray-600">Gender</div>
+            <div className="font-bold">
+              {formatGender(profile.gender)}
+            </div>
             </div>
             <div>
               <div className="text-sm font-bold text-gray-600">Country</div>

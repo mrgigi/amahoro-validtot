@@ -456,14 +456,10 @@ export default function PostCard({ post }) {
                   } ${isLocked ? 'opacity-75' : ''}`}
                 />
                 <div
-                  className="absolute inset-0 z-10 opacity-30 mix-blend-multiply pointer-events-none"
-                  style={{ backgroundColor: optionColor }}
-                />
-                <div
-                  className={`absolute top-2 left-2 z-30 px-3 py-1 border-4 border-black font-black text-xs md:text-sm ${optionTextClass}`}
+                  className={`absolute top-2 left-2 z-30 px-2 py-0.5 border-4 border-black font-black text-[10px] md:text-xs rounded-sm ${optionTextClass}`}
                   style={{ backgroundColor: optionColor }}
                 >
-                  Option {optionLabel}
+                  {optionLabel}
                 </div>
                 {isVotedImage && (
                   <div className="absolute top-2 right-2 z-30 bg-[#00FF00] border-4 border-black p-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
