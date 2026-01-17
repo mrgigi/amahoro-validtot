@@ -15,6 +15,7 @@ export default function CreatePost() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [accessCode, setAccessCode] = useState('');
   const [hasCopiedCode, setHasCopiedCode] = useState(false);
+  const [showCopyWarning, setShowCopyWarning] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const createPostMutation = useMutation({
@@ -109,6 +110,7 @@ export default function CreatePost() {
     }
     setAccessCode(code);
     setHasCopiedCode(false);
+    setShowCopyWarning(true);
   };
 
   const handleCopyCode = async () => {
@@ -120,6 +122,7 @@ export default function CreatePost() {
     try {
       await navigator.clipboard.writeText(value);
       setHasCopiedCode(true);
+      setShowCopyWarning(false);
       alert('Access code copied. Save it somewhere safe.');
     } catch {
       alert('Could not copy automatically. Please select and copy the code manually.');
@@ -141,8 +144,13 @@ export default function CreatePost() {
     }
 
     if (isPrivate && !hasCopiedCode) {
-      alert('Please copy your access code (or save it) before posting. Tap COPY next to the code.');
-      return;
+      const confirmed = window.confirm(
+        'You have not tapped COPY yet. Have you saved this access code somewhere safe and shared it with the people who should unlock this post?'
+      );
+      if (!confirmed) {
+        alert('Please tap COPY next to the code and save it before posting.');
+        return;
+      }
     }
 
     const {
@@ -324,11 +332,13 @@ export default function CreatePost() {
                     type="text"
                     value={accessCode}
                     onChange={(e) => {
-                      setAccessCode(e.target.value.toUpperCase());
+                      const value = e.target.value.toUpperCase();
+                      setAccessCode(value);
                       setHasCopiedCode(false);
+                      setShowCopyWarning(!!value);
                     }}
                     maxLength={12}
-                    className="flex-1 p-3 border-4 border-black font-bold bg-white focus:outline-none focus:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+                    className="flex-1 p-3 border-4 border-black font-bold uppercase bg-white focus:outline-none focus:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
                     placeholder="e.g. ABC123"
                   />
                   <button
@@ -346,6 +356,11 @@ export default function CreatePost() {
                     COPY
                   </button>
                 </div>
+                {isPrivate && showCopyWarning && !hasCopiedCode && accessCode.trim() && (
+                  <div className="text-xs font-bold text-red-600 mt-1">
+                    Don't forget to tap COPY and save this code. Without it, voters can't unlock your post.
+                  </div>
+                )}
               </div>
             )}
           </div>
