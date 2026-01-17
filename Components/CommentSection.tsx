@@ -165,7 +165,9 @@ export default function CommentSection({ post }: { post: any }) {
         className="flex items-center gap-2 mb-4 p-3 bg-[#FFFF00] border-4 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
       >
         <MessageCircle className="w-5 h-5" />
-        {post.comment_count || 0} comment{(post.comment_count || 0) !== 1 ? 's' : ''}
+        {showComments
+          ? 'Hide comments'
+          : `${post.comment_count || 0} comment${(post.comment_count || 0) !== 1 ? 's' : ''} • Tap to view`}
       </button>
 
       {showComments && (
@@ -275,8 +277,8 @@ export default function CommentSection({ post }: { post: any }) {
             ))}
             
             {comments.length === 0 && (
-              <div className="text-center text-gray-500 font-bold py-4">
-                No comments yet. Be the first!
+              <div className="text-center text-gray-700 font-bold py-4 border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                No comments yet. Be the first to share your take.
               </div>
             )}
           </div>

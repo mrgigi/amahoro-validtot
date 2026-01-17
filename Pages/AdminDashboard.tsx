@@ -519,11 +519,39 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{postsCount}</div><div className="font-bold ml-auto">Posts</div></div>
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{votesCount}</div><div className="font-bold ml-auto">Votes</div></div>
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><BarChart3 className="w-6 h-6" /><div className="font-black text-2xl">{commentsCount}</div><div className="font-bold ml-auto">Comments</div></div>
           <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3"><Users className="w-6 h-6" /><div className="font-black text-2xl">{usersCount}</div><div className="font-bold ml-auto">Users</div></div>
+        </div>
+
+        <div className="mb-6">
+          {pendingReportsCount > 0 ? (
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 bg-[#FFF3F3] border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+                <div className="font-black text-sm md:text-base">
+                  {pendingReportsCount} pending report
+                  {pendingReportsCount !== 1 ? "s" : ""} needing review
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('reports');
+                  setFilterStatus('Pending');
+                }}
+                className="px-4 py-2 bg-[#FF006E] text-white border-2 border-black font-black text-xs md:text-sm hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+              >
+                Go to pending reports
+              </button>
+            </div>
+          ) : (
+            <div className="p-4 bg-white border-2 border-dashed border-gray-400 text-sm font-bold text-gray-600">
+              No pending reports right now.
+            </div>
+          )}
         </div>
 
         {/* View Tabs */}
@@ -548,7 +576,12 @@ export default function AdminDashboard() {
             }`}
           >
             <Shield className="w-5 h-5" />
-            Reports Management
+            <span>Reports Management</span>
+            {pendingReportsCount > 0 && (
+              <span className="ml-2 px-2 py-0.5 text-xs font-black bg-red-600 text-white border-2 border-black rounded-sm">
+                {pendingReportsCount} pending
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('users')}

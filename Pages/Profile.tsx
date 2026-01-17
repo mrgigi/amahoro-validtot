@@ -35,6 +35,10 @@ export default function Profile() {
   const [adminOrganizationInput, setAdminOrganizationInput] = useState("");
   const [savingAdmin, setSavingAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
+  const [myPostsSort, setMyPostsSort] = useState<
+    "newest" | "oldest" | "mostVotes" | "mostComments"
+  >("newest");
+  const [votesSort, setVotesSort] = useState<"newest" | "oldest">("newest");
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -148,6 +152,46 @@ export default function Profile() {
 
       return data || [];
     }
+  });
+
+  const sortedMyPosts = [...myPosts].sort((a: any, b: any) => {
+    const getTime = (value: any) =>
+      value ? new Date(value as string).getTime() : 0;
+
+    if (myPostsSort === "newest") {
+      return getTime(b.created_at) - getTime(a.created_at);
+    }
+
+    if (myPostsSort === "oldest") {
+      return getTime(a.created_at) - getTime(b.created_at);
+    }
+
+    if (myPostsSort === "mostVotes") {
+      const votesA = a.total_votes || 0;
+      const votesB = b.total_votes || 0;
+      if (votesB !== votesA) {
+        return votesB - votesA;
+      }
+      return getTime(b.created_at) - getTime(a.created_at);
+    }
+
+    const commentsA = a.comment_count || 0;
+    const commentsB = b.comment_count || 0;
+    if (commentsB !== commentsA) {
+      return commentsB - commentsA;
+    }
+    return getTime(b.created_at) - getTime(a.created_at);
+  });
+
+  const sortedVotes = [...votes].sort((a: any, b: any) => {
+    const getTime = (value: any) =>
+      value ? new Date(value as string).getTime() : 0;
+
+    if (votesSort === "newest") {
+      return getTime(b.created_at) - getTime(a.created_at);
+    }
+
+    return getTime(a.created_at) - getTime(b.created_at);
   });
 
   if (loading) {
@@ -586,9 +630,72 @@ export default function Profile() {
 
         {activeTab === "posts" && (
           <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <FileText className="w-5 h-5" />
               <h2 className="text-xl font-black">Your posts</h2>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+              <div className="text-xs md:text-sm font-bold text-gray-600">
+                {myPosts.length === 0
+                  ? "You have not created any posts yet."
+                  : `You have created ${myPosts.length} post${
+                      myPosts.length !== 1 ? "s" : ""
+                    }.`}
+              </div>
+              {myPosts.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-600">
+                    Sort by
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMyPostsSort("newest")}
+                      className={`px-2 py-1 text-[11px] font-black border-2 border-black ${
+                        myPostsSort === "newest"
+                          ? "bg-black text-white"
+                          : "bg-white"
+                      }`}
+                    >
+                      Newest
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMyPostsSort("oldest")}
+                      className={`px-2 py-1 text-[11px] font-black border-2 border-black ${
+                        myPostsSort === "oldest"
+                          ? "bg-black text-white"
+                          : "bg-white"
+                      }`}
+                    >
+                      Oldest
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMyPostsSort("mostVotes")}
+                      className={`px-2 py-1 text-[11px] font-black border-2 border-black ${
+                        myPostsSort === "mostVotes"
+                          ? "bg-black text-white"
+                          : "bg-white"
+                      }`}
+                    >
+                      Most votes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMyPostsSort("mostComments")}
+                      className={`px-2 py-1 text-[11px] font-black border-2 border-black ${
+                        myPostsSort === "mostComments"
+                          ? "bg-black text-white"
+                          : "bg-white"
+                      }`}
+                    >
+                      Most comments
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {myPostsLoading ? (
@@ -601,7 +708,7 @@ export default function Profile() {
               </div>
             ) : (
               <div className="space-y-3">
-                {myPosts.map((post: any) => {
+                {sortedMyPosts.map((post: any) => {
                   const createdAt = post.created_at
                     ? new Date(post.created_at).toLocaleString()
                     : "Unknown time";
@@ -640,9 +747,50 @@ export default function Profile() {
 
         {activeTab === "votes" && (
           <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <Clock className="w-5 h-5" />
               <h2 className="text-xl font-black">Your recent votes</h2>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+              <div className="text-xs md:text-sm font-bold text-gray-600">
+                {votes.length === 0
+                  ? "You have not voted on any posts yet."
+                  : `You have voted on ${votes.length} post${
+                      votes.length !== 1 ? "s" : ""
+                    }.`}
+              </div>
+              {votes.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-600">
+                    Sort by
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setVotesSort("newest")}
+                      className={`px-2 py-1 text-[11px] font-black border-2 border-black ${
+                        votesSort === "newest"
+                          ? "bg-black text-white"
+                          : "bg-white"
+                      }`}
+                    >
+                      Newest first
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVotesSort("oldest")}
+                      className={`px-2 py-1 text-[11px] font-black border-2 border-black ${
+                        votesSort === "oldest"
+                          ? "bg-black text-white"
+                          : "bg-white"
+                      }`}
+                    >
+                      Oldest first
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {votesLoading ? (
@@ -655,7 +803,7 @@ export default function Profile() {
               </div>
             ) : (
               <div className="space-y-3">
-                {votes.map((vote: any) => {
+                {sortedVotes.map((vote: any) => {
                   const post = vote.post;
                   const options = post?.options || [];
                   const index =

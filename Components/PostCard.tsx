@@ -221,7 +221,7 @@ export default function PostCard({ post }) {
 
   const handleShare = () => {
     const postUrl = `${window.location.origin}${createPageUrl('Feed')}?postId=${post.id}`;
-    const shareText = `${post.title}\n\n${postUrl}`;
+    const shareText = `${post.title || 'ValidToT campaign'}\n\n${postUrl}`;
     
     if (navigator.share) {
       navigator.share({
@@ -230,7 +230,7 @@ export default function PostCard({ post }) {
       });
     } else {
       navigator.clipboard.writeText(shareText);
-      alert('Link copied!');
+      alert('Campaign link copied. Paste it into your chats to get votes.');
     }
   };
 
