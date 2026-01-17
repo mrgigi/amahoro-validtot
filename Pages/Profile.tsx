@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase, checkAdminRole } from "../src/supabaseClient";
-import { ArrowLeft, User, LogOut, Clock } from "lucide-react";
+import { ArrowLeft, User, LogOut, Clock, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createPageUrl } from "../src/lib/utils";
@@ -114,6 +114,33 @@ export default function Profile() {
 
       if (error) {
         console.error("Error loading vote history:", error);
+        throw error;
+      }
+
+      return data || [];
+    }
+  });
+
+  const { data: myPosts = [], isLoading: myPostsLoading } = useQuery({
+    queryKey: ["my_posts"],
+    queryFn: async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id, title, created_at, total_votes, comment_count, is_hidden")
+        .eq("created_by", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error("Error loading my posts:", error);
         throw error;
       }
 
@@ -521,6 +548,58 @@ export default function Profile() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FileText className="w-5 h-5" />
+            <h2 className="text-xl font-black">Your posts</h2>
+          </div>
+
+          {myPostsLoading ? (
+            <div className="text-sm font-bold text-gray-500">
+              Loading your posts...
+            </div>
+          ) : myPosts.length === 0 ? (
+            <div className="text-sm font-bold text-gray-500">
+              You haven&apos;t created any posts yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {myPosts.map((post: any) => {
+                const createdAt = post.created_at
+                  ? new Date(post.created_at).toLocaleString()
+                  : "Unknown time";
+                const votesCount = post.total_votes || 0;
+                const commentsCount = post.comment_count || 0;
+                const isHiddenPost = !!post.is_hidden;
+
+                return (
+                  <Link
+                    key={post.id}
+                    to={createPageUrl("Post", post.id)}
+                    className="block border-2 border-black p-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-black text-sm mb-1">
+                      {post.title || "Untitled post"}
+                    </div>
+                    <div className="text-xs font-bold text-gray-500 mb-1">
+                      Created: {createdAt}
+                    </div>
+                    <div className="text-xs font-bold text-gray-500">
+                      {votesCount} vote{votesCount !== 1 ? "s" : ""} •{" "}
+                      {commentsCount} comment{commentsCount !== 1 ? "s" : ""}
+                      {isHiddenPost && (
+                        <span className="ml-2 px-2 py-0.5 text-[10px] uppercase bg-red-600 text-white border border-black font-black">
+                          Hidden
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>

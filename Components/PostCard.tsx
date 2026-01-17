@@ -362,8 +362,8 @@ export default function PostCard({ post }) {
               <input
                 type="text"
                 value={unlockCode}
-                onChange={(e) => setUnlockCode(e.target.value)}
-                className="flex-1 p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                onChange={(e) => setUnlockCode(e.target.value.toUpperCase())}
+                className="flex-1 p-3 border-4 border-black font-bold uppercase bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
                 placeholder="Enter access code"
               />
               <button

@@ -145,7 +145,7 @@ export default function CreatePost() {
 
     if (isPrivate && !hasCopiedCode) {
       const confirmed = window.confirm(
-        'You have not tapped COPY yet. Have you saved this access code somewhere safe and shared it with the people who should unlock this post?'
+        "You haven't tapped COPY yet. Press OK to post your campaign now, or Cancel to go back and copy your invite code."
       );
       if (!confirmed) {
         alert('Please tap COPY next to the code and save it before posting.');
