@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createPageUrl } from "../src/lib/utils";
 import { COUNTRY_OPTIONS } from "./Auth";
+import LoadingScreen from "../Components/LoadingScreen";
 
 type ProfileRow = {
   id: string;
@@ -20,9 +21,7 @@ export default function Profile() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<"posts" | "votes" | "account">(
-    "posts"
-  );
+  const [activeTab, setActiveTab] = useState<"posts" | "votes">("posts");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileGenderInput, setProfileGenderInput] = useState("");
   const [profileCountryInput, setProfileCountryInput] = useState("");
@@ -152,13 +151,7 @@ export default function Profile() {
   });
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F5]">
-        <div className="text-center">
-          <div className="text-2xl font-black">Loading profile...</div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen mainText="Loading your profile…" />;
   }
 
   if (!profile) {
@@ -580,18 +573,6 @@ export default function Profile() {
             <Clock className="w-4 h-4" />
             Your votes
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("account")}
-            className={`flex items-center gap-2 px-4 py-2 font-black text-sm md:text-base whitespace-nowrap transition-all ${
-              activeTab === "account"
-                ? "bg-black text-white translate-y-[2px]"
-                : "bg-transparent text-black hover:bg-gray-200"
-            }`}
-          >
-            <LogOut className="w-4 h-4" />
-            Account & log out
-          </button>
         </div>
 
         {activeTab === "posts" && (
@@ -704,31 +685,13 @@ export default function Profile() {
           </div>
         )}
 
-        {activeTab === "account" && (
-          <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <User className="w-5 h-5" />
-              <h2 className="text-xl font-black">Account & log out</h2>
-            </div>
-            {email && (
-              <div>
-                <div className="text-sm font-bold text-gray-600">Email</div>
-                <div className="font-bold">{email}</div>
-              </div>
-            )}
-            <div>
-              <div className="text-sm font-bold text-gray-600">Role</div>
-              <div className="font-bold">{roleLabel}</div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="w-full mt-2 p-4 bg-[#FF0000] text-white border-4 border-black font-black text-lg shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2"
-            >
-              <LogOut className="w-6 h-6" />
-              LOG OUT
-            </button>
-          </div>
-        )}
+        <button
+          onClick={handleLogout}
+          className="w-full mt-6 p-4 bg-[#FF0000] text-white border-4 border-black font-black text-lg shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2"
+        >
+          <LogOut className="w-6 h-6" />
+          LOG OUT
+        </button>
       </div>
     </div>
   );

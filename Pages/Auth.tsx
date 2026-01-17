@@ -236,10 +236,10 @@ export default function Auth() {
       if (mode === "signup") {
         if (authRole === "admin") {
           if (!jobTitle.trim()) {
-            throw new Error("Please enter your job title or role to sign up as an admin.");
+            throw new Error("Please enter your job title or role to sign up as an Admin.");
           }
           if (!organization.trim()) {
-            throw new Error("Please enter your organization to sign up as an admin.");
+            throw new Error("Please enter your organization to sign up as an Admin.");
           }
         } else {
           if (!gender || !country || !cohort) {
@@ -370,11 +370,11 @@ export default function Auth() {
           <div className="font-bold">
             {mode === "signup"
               ? authRole === "admin"
-                ? "Sign up as an admin to create polls and see analytics"
-                : "Sign up as a voter to join campaigns and vote"
+                ? "Sign up as an Admin to create polls and see analytics"
+                : "Sign up as a Voter to join campaigns and vote"
               : authRole === "admin"
-                ? "Admin: sign in to manage polls and analytics"
-                : "Voter: sign in to see polls and vote"}
+                ? "Sign in as an Admin to manage polls and analytics"
+                : "Sign in as a Voter to see polls and vote"}
           </div>
         </div>
 
@@ -387,7 +387,7 @@ export default function Auth() {
                 authRole === "voter" ? "bg-[#00FF00]" : "bg-white"
               }`}
             >
-              {mode === "signup" ? "Sign up as voter" : "Sign in as voter"}
+              {mode === "signup" ? "Sign up as Voter" : "Sign in as Voter"}
             </button>
 
             <button
@@ -397,7 +397,7 @@ export default function Auth() {
                 authRole === "admin" ? "bg-[#FFFF00]" : "bg-white"
               }`}
             >
-              {mode === "signup" ? "Sign up as admin" : "Sign in as admin"}
+              {mode === "signup" ? "Sign up as Admin" : "Sign in as Admin"}
             </button>
           </div>
 

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Shield, ArrowLeft, Eye, EyeOff, Trash2, Check, AlertTriangle, BarChart3, FileText, Users, UserX, UserCheck } from 'lucide-react';
 import { createPageUrl } from '../src/lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
+import LoadingScreen from '../Components/LoadingScreen';
 
 function PieChart({ segments }: { segments: { value: number; color: string }[] }) {
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
@@ -491,24 +492,11 @@ export default function AdminDashboard() {
   }
 
   if (!currentUser) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-[#F5F5F5]">
-        <div className="text-center">
-          <Shield className="w-16 h-16 mx-auto mb-4 animate-pulse" />
-          <div className="text-2xl font-black">Checking permissions...</div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen mainText="Checking permissions…" />;
   }
 
   if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-[#F5F5F5]">
-        <div className="text-center">
-          <div className="text-2xl font-black">Loading reports...</div>
-        </div>
-      </div>
-    );
+    return <LoadingScreen mainText="Loading admin dashboard…" />;
   }
 
   return (
