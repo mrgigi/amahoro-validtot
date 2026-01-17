@@ -469,10 +469,13 @@ export default function CreatePost() {
               <span>{showAdvanced ? 'Hide' : 'Show'}</span>
             </button>
             {showAdvanced && (
-              <div className="mt-3 p-4 border-4 border-black bg-white space-y-4">
+              <div className="mt-3 p-4 border-4 border-black bg-white space-y-6">
                 <div>
-                  <label className="block text-xl font-black mb-2 transform -rotate-1">
+                  <label className="block text-xs font-black text-gray-600 mb-1">
                     VISIBILITY
+                  </label>
+                  <label className="block text-xl font-black mb-2 transform -rotate-1">
+                    Who can see and unlock this campaign?
                   </label>
                   <div className="flex gap-3 mb-3">
                     <button
@@ -537,15 +540,21 @@ export default function CreatePost() {
                   )}
                 </div>
 
-                <div>
-                  <label className="flex items-center gap-2 font-bold text-sm">
+                <div className="border-t-4 border-black pt-4">
+                  <label className="block text-xs font-black text-gray-600 mb-1">
+                    TIMED VOTING
+                  </label>
+                  <label className="block text-xl font-black mb-2 transform -rotate-1">
+                    When should this campaign be open for votes?
+                  </label>
+                  <label className="flex items-center gap-2 font-bold text-sm mb-2">
                     <input
                       type="checkbox"
                       checked={enableTimedVoting}
                       onChange={(e) => setEnableTimedVoting(e.target.checked)}
                       className="w-4 h-4"
                     />
-                    <span>Enable timed voting</span>
+                    <span>Enable timed voting (optional)</span>
                   </label>
                   {enableTimedVoting && (
                     <>
