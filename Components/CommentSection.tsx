@@ -139,7 +139,7 @@ export default function CommentSection({ post }: { post: any }) {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      navigate('/auth', { state: { from: location } });
+      navigate('/auth', { state: { from: location, reason: 'comment' } });
       return;
     }
 

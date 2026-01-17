@@ -213,7 +213,7 @@ export default function CreatePost() {
     setSubmitError(null);
     
     if (images.length < 2) {
-      alert('Please add at least 2 images for comparison');
+      setSubmitError('Please add at least 2 images for comparison.');
       return;
     }
 
@@ -257,6 +257,7 @@ export default function CreatePost() {
 
     if (!user) {
       navigate('/auth', { replace: true });
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -413,6 +414,50 @@ export default function CreatePost() {
               </label>
             )}
           </div>
+
+          {images.length >= 2 && (
+            <div className="border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 space-y-3">
+              <div className="text-xs font-black text-gray-600">Preview</div>
+              <div className="text-2xl font-black transform -rotate-1">
+                {title || (options.length ? options.join(' or ') : 'Your question will show here')}
+              </div>
+              <div
+                className={`grid gap-3 ${
+                  images.length === 1 ? 'grid-cols-1' :
+                  images.length === 2 ? 'grid-cols-2' :
+                  'grid-cols-2'
+                }`}
+              >
+                {images.map((img, index) => {
+                  const colors = ['#FF006E', '#0066FF', '#FFFF00'];
+                  const textColors = ['text-white', 'text-white', 'text-black'];
+                  const optionColor = colors[index % colors.length];
+                  const optionTextClass = textColors[index % textColors.length];
+                  const optionLabel = String.fromCharCode(65 + index);
+                  return (
+                    <div
+                      key={index}
+                      className={`relative ${
+                        images.length === 3 && index === 0 ? 'col-span-2' : ''
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-40 object-cover border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                      />
+                      <div
+                        className={`absolute top-2 left-2 z-10 px-2 py-0.5 border-4 border-black font-black text-[10px] md:text-xs rounded-sm ${optionTextClass}`}
+                        style={{ backgroundColor: optionColor }}
+                      >
+                        {optionLabel}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-xl font-black mb-2 transform -rotate-1">

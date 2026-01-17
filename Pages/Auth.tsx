@@ -217,10 +217,24 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fromState = location.state as { from?: { pathname?: string } } | null;
+  const fromState = location.state as { from?: { pathname?: string }; reason?: string } | null;
   const fromPath = fromState?.from?.pathname;
+  const authReason = fromState?.reason;
   const allowedReturnPaths = ["/create-post", "/admin"];
   const defaultAfterLogin = "/";
+
+  const authContextMessage =
+    authReason === "vote"
+      ? "Sign in to vote and see live results."
+      : authReason === "comment"
+      ? "Sign in to add a comment."
+      : authReason === "report_post"
+      ? "Sign in to report posts and keep ValidToT safe."
+      : authReason === "report_comment"
+      ? "Sign in to report comments and keep ValidToT safe."
+      : authReason
+      ? "Sign in to continue."
+      : null;
 
   const passwordIsStrongEnough = (value: string) => {
     if (value.length < 8) return false;
@@ -387,6 +401,12 @@ export default function Auth() {
                 : "Sign in as a Voter to see polls and vote"}
           </div>
         </div>
+
+        {authContextMessage && !error && !message && (
+          <div className="mb-4 p-3 border-4 border-black bg-[#FFFF00] font-bold text-xs">
+            {authContextMessage}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-2">

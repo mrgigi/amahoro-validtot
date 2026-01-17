@@ -16,6 +16,8 @@ export default function Feed() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [showSearch, setShowSearch] = useState(false);
+  const [deepLinkPostId, setDeepLinkPostId] = useState<string | null>(null);
+  const [deepLinkNotFound, setDeepLinkNotFound] = useState(false);
 
   const { data: allPosts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ['posts'],
@@ -39,7 +41,25 @@ export default function Feed() {
     const urlParams = new URLSearchParams(window.location.search);
     const postId = urlParams.get('postId');
     
-    if (postId && containerRef.current) {
+    if (!postId) {
+      setDeepLinkPostId(null);
+      setDeepLinkNotFound(false);
+      return;
+    }
+
+    setDeepLinkPostId(postId);
+
+    const matchingPost = allPosts.find(
+      (post) => !post.is_hidden && post.type === 'comparison' && post.id === postId
+    );
+
+    if (!matchingPost && allPosts.length > 0) {
+      setDeepLinkNotFound(true);
+    } else {
+      setDeepLinkNotFound(false);
+    }
+
+    if (matchingPost && containerRef.current) {
       setTimeout(() => {
         const postElement = document.getElementById(`post-${postId}`);
         if (postElement) {
@@ -171,6 +191,21 @@ export default function Feed() {
           </Link>
         </div>
       </div>
+
+      {deepLinkPostId && !deepLinkNotFound && (
+        <div className="fixed top-14 left-0 right-0 z-10 flex justify-center">
+          <div className="mt-1 px-3 py-1 bg-black text-[#FFFF00] border-4 border-black font-black text-xs">
+            Jumping to the campaign you opened…
+          </div>
+        </div>
+      )}
+      {deepLinkNotFound && (
+        <div className="fixed top-14 left-0 right-0 z-10 flex justify-center">
+          <div className="mt-1 px-3 py-1 bg-white border-4 border-black font-black text-xs">
+            That campaign is no longer available. Showing the latest campaigns.
+          </div>
+        </div>
+      )}
 
       {/* Feed Container */}
       <div

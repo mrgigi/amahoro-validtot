@@ -242,7 +242,7 @@ export default function PostCard({ post }) {
 
       if (!user) {
         setMenuOpen(false);
-        navigate('/auth', { state: { from: location } });
+        navigate('/auth', { state: { from: location, reason: 'report_post' } });
         return;
       }
 
@@ -360,7 +360,7 @@ export default function PostCard({ post }) {
     }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      navigate('/auth', { state: { from: location } });
+      navigate('/auth', { state: { from: location, reason: 'vote' } });
       return;
     }
     const confirmed = window.confirm(
