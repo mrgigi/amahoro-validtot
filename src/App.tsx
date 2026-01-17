@@ -8,17 +8,6 @@ import Auth from "../Pages/Auth";
 import Onboarding from "../Pages/Onboarding";
 import { supabase, ensureUserProfile } from "./supabaseClient";
 
-function hasCompletedOnboarding() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  try {
-    return localStorage.getItem("validtot_onboarding_completed") === "true";
-  } catch {
-    return false;
-  }
-}
-
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -62,29 +51,17 @@ function OnboardingGate({
         return;
       }
 
-      const completedFlag = hasCompletedOnboarding();
-      if (completedFlag) {
-        if (!isMounted) return;
-        setNeedsOnboarding(false);
-        setChecking(false);
-        return;
-      }
-
       try {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("gender, country")
+          .select("onboarding_complete")
           .eq("id", user.id)
           .maybeSingle();
 
         if (!isMounted) return;
 
-        const completed = hasCompletedOnboarding();
-        let needs =
-          !profile || !profile.gender || !profile.country;
-        if (completed) {
-          needs = false;
-        }
+        const needs =
+          !profile || !profile.onboarding_complete;
 
         setNeedsOnboarding(needs);
       } catch (error) {
@@ -106,9 +83,7 @@ function OnboardingGate({
     };
   }, [user, location.pathname]);
 
-  const completed = hasCompletedOnboarding();
-
-  if (!completed && needsOnboarding && location.pathname !== "/onboarding") {
+  if (needsOnboarding && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }
 

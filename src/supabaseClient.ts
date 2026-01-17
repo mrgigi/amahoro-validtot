@@ -52,7 +52,7 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
 
   const { data: existing } = await supabase
     .from("profiles")
-    .select("id, username, created_at, is_banned, gender, country")
+    .select("id, username, created_at, is_banned, gender, country, age_range, onboarding_complete")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -76,7 +76,7 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
         .from("profiles")
         .update(updates)
         .eq("id", user.id)
-        .select("id, username, created_at, is_banned, gender, country")
+        .select("id, username, created_at, is_banned, gender, country, age_range, onboarding_complete")
         .maybeSingle();
 
       if (updateError) {
@@ -97,7 +97,9 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
       id: user.id,
       username,
       gender,
-      country
+      country,
+      age_range: null,
+      onboarding_complete: false
     })
     .select()
     .single();

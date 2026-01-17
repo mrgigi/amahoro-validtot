@@ -13,6 +13,7 @@ type ProfileRow = {
   created_at: string;
   gender?: string | null;
   country?: string | null;
+  age_range?: string | null;
 };
 
 export default function Profile() {
@@ -68,7 +69,7 @@ export default function Profile() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, created_at, gender, country")
+        .select("id, username, created_at, gender, country, age_range")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -407,6 +408,12 @@ export default function Profile() {
               <div className="font-bold">
                 {profile.country || "Not set"}
               </div>
+            </div>
+          </div>
+          <div>
+            <div className="text-sm font-bold text-gray-600">Age range</div>
+            <div className="font-bold">
+              {profile.age_range || "Not set"}
             </div>
           </div>
 

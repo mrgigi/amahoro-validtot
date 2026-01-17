@@ -6,9 +6,18 @@ import { COUNTRY_OPTIONS } from "./Auth";
 import { createPageUrl } from "../src/lib/utils";
 
 type GenderValue = "male" | "female" | "";
+type AgeRangeValue =
+  | ""
+  | "18-24"
+  | "25-34"
+  | "35-44"
+  | "45-54"
+  | "55+"
+  | "Prefer not to say";
 
 export default function Onboarding() {
   const [gender, setGender] = useState<GenderValue>("");
+  const [ageRange, setAgeRange] = useState<AgeRangeValue>("");
   const [country, setCountry] = useState("");
   const [publisher, setPublisher] = useState(false);
   const [jobTitle, setJobTitle] = useState("");
@@ -36,7 +45,7 @@ export default function Onboarding() {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("gender, country")
+          .select("gender, country, age_range")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -49,6 +58,9 @@ export default function Onboarding() {
           }
           if (profile.country) {
             setCountry(profile.country);
+          }
+          if (profile.age_range) {
+            setAgeRange(profile.age_range as AgeRangeValue);
           }
         }
       } catch (err) {
@@ -76,12 +88,22 @@ export default function Onboarding() {
     }
 
     if (step === 2) {
+      if (!ageRange) {
+        setError("Please select your age range.");
+        return;
+      }
+
+      setStep(3);
+      return;
+    }
+
+    if (step === 3) {
       if (!country) {
         setError("Please select your country.");
         return;
       }
 
-      setStep(3);
+      setStep(4);
       return;
     }
 
@@ -115,7 +137,9 @@ export default function Onboarding() {
         .from("profiles")
         .update({
           gender,
-          country
+          country,
+          age_range: ageRange || null,
+          onboarding_complete: true
         })
         .eq("id", user.id);
 
@@ -138,28 +162,6 @@ export default function Onboarding() {
 
       if (authError) {
         throw authError;
-      }
-
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const { data: verifiedProfile, error: verifyError } = await supabase
-          .from("profiles")
-          .select("gender, country")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!verifyError && verifiedProfile && verifiedProfile.gender && verifiedProfile.country) {
-          break;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-
-      try {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("validtot_onboarding_completed", "true");
-        }
-      } catch (storageError) {
-        console.error("Failed to mark onboarding as completed:", storageError);
       }
 
       navigate(createPageUrl("Feed"), { replace: true });
@@ -193,7 +195,7 @@ export default function Onboarding() {
           </Link>
           <div className="text-right">
             <div className="text-xs font-bold text-gray-500">
-              Step {step} of 3
+              Step {step} of 4
             </div>
             <div className="text-xl font-black">
               Tell us about you
@@ -234,6 +236,25 @@ export default function Onboarding() {
 
           {step === 2 && (
             <div>
+              <div className="text-sm font-bold mb-1">Your age range</div>
+              <select
+                value={ageRange}
+                onChange={(e) => setAgeRange(e.target.value as AgeRangeValue)}
+                className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+              >
+                <option value="">Select an age range</option>
+                <option value="18-24">18–24</option>
+                <option value="25-34">25–34</option>
+                <option value="35-44">35–44</option>
+                <option value="45-54">45–54</option>
+                <option value="55+">55+</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div>
               <div className="text-sm font-bold mb-1">Your country</div>
               <select
                 value={country}
@@ -250,7 +271,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="border-2 border-black p-4 bg-[#F9F9F9]">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-bold">
@@ -349,7 +370,7 @@ export default function Onboarding() {
           >
             {saving
               ? "Saving..."
-              : step === 3
+              : step === 4
               ? "Continue to home feed"
               : "Continue"}
           </button>
