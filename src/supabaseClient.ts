@@ -52,7 +52,7 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
 
   const { data: existing } = await supabase
     .from("profiles")
-    .select("id, username, created_at, is_banned, gender, country, age_range, onboarding_complete")
+    .select("id, username, email, created_at, is_banned, gender, country, age_range, onboarding_complete")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -61,22 +61,25 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
   const metadata = (user as any).user_metadata || {};
   const gender = metadata.gender ?? null;
   const country = metadata.country ?? null;
+  const email = user.email ?? null;
 
   if (existing) {
     const needsUpdate =
       (!existing.gender && gender) ||
-      (!existing.country && country);
+      (!existing.country && country) ||
+      (!existing.email && email);
 
     if (needsUpdate) {
       const updates: any = {};
       if (!existing.gender && gender) updates.gender = gender;
       if (!existing.country && country) updates.country = country;
+       if (!existing.email && email) updates.email = email;
 
       const { data: updated, error: updateError } = await supabase
         .from("profiles")
         .update(updates)
         .eq("id", user.id)
-        .select("id, username, created_at, is_banned, gender, country, age_range, onboarding_complete")
+        .select("id, username, email, created_at, is_banned, gender, country, age_range, onboarding_complete")
         .maybeSingle();
 
       if (updateError) {
@@ -96,6 +99,7 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
     .insert({
       id: user.id,
       username,
+      email,
       gender,
       country,
       age_range: null,

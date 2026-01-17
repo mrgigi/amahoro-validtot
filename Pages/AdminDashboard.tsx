@@ -163,7 +163,7 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, email, created_at, gender, country, age_range, onboarding_complete, is_banned')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
@@ -777,54 +777,104 @@ export default function AdminDashboard() {
         ) : (
           <div className="space-y-4">
             <h2 className="text-3xl font-black mb-6">Manage Users</h2>
-            {allUsers.length === 0 ? (
+            {isLoadingUsers ? (
+              <div className="text-center py-12">
+                <div className="text-2xl font-black text-gray-600">Loading users…</div>
+              </div>
+            ) : allUsers.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-2xl font-black text-gray-600">No users found</div>
               </div>
             ) : (
-              allUsers.map((user: any) => (
-                <div
-                  key={user.id}
-                  className={`bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-6 flex flex-col sm:flex-row justify-between items-center gap-4 ${user.is_banned ? 'bg-red-50' : ''}`}
-                >
-                  <div className="flex-1 w-full">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="font-black text-xl">{user.username || 'Anonymous'}</div>
-                      {user.is_banned && (
-                        <span className="px-3 py-1 bg-red-600 text-white border-2 border-black font-black text-xs uppercase">
-                          BANNED
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm font-bold text-gray-500">
-                      ID: {user.id}
-                    </div>
-                    <div className="text-sm font-medium text-gray-400">
-                      Joined: {new Date(user.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button
-                      onClick={() => handleToggleBan(user.id, user.is_banned)}
-                      className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 border-4 border-black font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all ${
-                        user.is_banned 
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
-                    >
-                      {user.is_banned ? (
-                        <>
-                          <UserCheck className="w-5 h-5" /> UNBAN USER
-                        </>
-                      ) : (
-                        <>
-                          <UserX className="w-5 h-5" /> BAN USER
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ))
+              <div className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] p-4 overflow-x-auto">
+                <table className="min-w-full text-left text-xs sm:text-sm font-bold">
+                  <thead>
+                    <tr className="border-b-2 border-black">
+                      <th className="py-2 pr-4">Username</th>
+                      <th className="py-2 pr-4">Email</th>
+                      <th className="py-2 pr-4 hidden md:table-cell">ID</th>
+                      <th className="py-2 pr-4">Joined</th>
+                      <th className="py-2 pr-4 hidden sm:table-cell">Gender</th>
+                      <th className="py-2 pr-4 hidden sm:table-cell">Country</th>
+                      <th className="py-2 pr-4 hidden sm:table-cell">Age range</th>
+                      <th className="py-2 pr-4 hidden sm:table-cell">Onboarding</th>
+                      <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pl-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allUsers.map((user: any) => (
+                      <tr
+                        key={user.id}
+                        className={`${user.is_banned ? 'bg-red-50' : 'bg-white'} border-b border-gray-200`}
+                      >
+                        <td className="py-2 pr-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-sm sm:text-base">
+                              {user.username || 'Anonymous'}
+                            </span>
+                            {user.is_banned && (
+                              <span className="px-2 py-0.5 bg-red-600 text-white border-2 border-black font-black text-[10px] uppercase">
+                                BANNED
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <div className="max-w-[180px] truncate">
+                            {user.email || '—'}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-4 hidden md:table-cell">
+                          <div className="max-w-[200px] truncate font-mono text-[10px] sm:text-xs">
+                            {user.id}
+                          </div>
+                        </td>
+                        <td className="py-2 pr-4">
+                          {user.created_at
+                            ? new Date(user.created_at).toLocaleDateString()
+                            : 'Unknown'}
+                        </td>
+                        <td className="py-2 pr-4 hidden sm:table-cell">
+                          {user.gender || 'Not set'}
+                        </td>
+                        <td className="py-2 pr-4 hidden sm:table-cell">
+                          {user.country || 'Not set'}
+                        </td>
+                        <td className="py-2 pr-4 hidden sm:table-cell">
+                          {user.age_range || 'Not set'}
+                        </td>
+                        <td className="py-2 pr-4 hidden sm:table-cell">
+                          {user.onboarding_complete ? 'Complete' : 'Incomplete'}
+                        </td>
+                        <td className="py-2 pr-4">
+                          {user.is_banned ? 'Banned' : 'Active'}
+                        </td>
+                        <td className="py-2 pl-4">
+                          <button
+                            onClick={() => handleToggleBan(user.id, user.is_banned)}
+                            className={`flex items-center justify-center gap-2 px-4 py-2 border-4 border-black font-black text-xs sm:text-sm shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all ${
+                              user.is_banned
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                : 'bg-red-100 text-red-800 hover:bg-red-200'
+                            }`}
+                          >
+                            {user.is_banned ? (
+                              <>
+                                <UserCheck className="w-4 h-4" /> UNBAN
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="w-4 h-4" /> BAN
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}

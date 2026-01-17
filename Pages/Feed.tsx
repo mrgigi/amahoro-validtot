@@ -142,11 +142,11 @@ export default function Feed() {
       <div className="h-screen w-full flex items-center justify-center bg-[#F5F5F5] p-4">
         <div className="text-center max-w-md">
           <div className="text-6xl font-black mb-4 transform -rotate-2">ValidToT</div>
-          <div className="text-xl font-bold mb-4">No posts yet! Be the first to create one.</div>
+          <div className="text-xl font-bold mb-4">No posts yet. Be the first to create one.</div>
           <ul className="text-left text-sm font-bold text-gray-800 mb-8 space-y-2">
-            <li>• Get instant, honest votes so you can make decisions with confidence.</li>
-            <li>• Cut through endless group chats and see clear results in seconds.</li>
-            <li>• Turn any choice into a fun game your friends actually respond to.</li>
+            <li>• Get instant, honest votes.</li>
+            <li>• Skip group chat chaos and see clear results fast.</li>
+            <li>• Turn any decision into a fun, engaging poll.</li>
           </ul>
           <Link
             to={createPageUrl('CreatePost')}
