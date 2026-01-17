@@ -468,7 +468,6 @@ export default function PostCard({ post }) {
                 <img
                   src={image}
                   alt={`Post image ${index + 1}`}
-                  loading="lazy"
                   className={`w-full h-64 object-cover border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${
                     isLocked ? 'opacity-75' : ''
                   }`}

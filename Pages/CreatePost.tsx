@@ -82,6 +82,7 @@ export default function CreatePost() {
   const [enableTimedVoting, setEnableTimedVoting] = useState(false);
   const [votingStartsAt, setVotingStartsAt] = useState('');
   const [votingEndsAt, setVotingEndsAt] = useState('');
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const isSubmittingRef = useRef(false);
 
   const createPostMutation = useMutation({
@@ -592,15 +593,110 @@ export default function CreatePost() {
               {submitError}
             </div>
           )}
-          <button
-            type="submit"
-            disabled={createPostMutation.isPending || uploading}
-            className="w-full p-6 bg-[#00FF00] border-4 border-black font-black text-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {createPostMutation.isPending ? 'POSTING...' : 'POST IT!'}
-          </button>
+          <div className="flex flex-col md:flex-row gap-3">
+            <button
+              type="button"
+              onClick={() => setShowPreviewModal(true)}
+              disabled={uploading}
+              className="w-full md:w-1/2 p-6 bg-white border-4 border-black font-black text-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              PREVIEW
+            </button>
+            <button
+              type="submit"
+              disabled={createPostMutation.isPending || uploading}
+              className="w-full md:w-1/2 p-6 bg-[#00FF00] border-4 border-black font-black text-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {createPostMutation.isPending ? 'POSTING...' : 'POST IT!'}
+            </button>
+          </div>
         </form>
       </div>
+
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="relative w-full max-w-2xl bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-4 space-y-4 max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setShowPreviewModal(false)}
+              className="absolute top-2 right-2 p-1 border-2 border-black bg-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-xs font-black text-gray-600">Campaign preview</div>
+            <div className="text-3xl md:text-4xl font-black leading-tight transform -rotate-1">
+              {title || (options.length ? options.join(' or ') : 'Your question will show here')}
+            </div>
+
+            {images.length >= 2 && (
+              <div
+                className={`grid gap-3 ${
+                  images.length === 1 ? 'grid-cols-1' :
+                  images.length === 2 ? 'grid-cols-2' :
+                  'grid-cols-2'
+                }`}
+              >
+                {images.map((img, index) => {
+                  const colors = ['#FF006E', '#0066FF', '#FFFF00'];
+                  const textColors = ['text-white', 'text-white', 'text-black'];
+                  const optionColor = colors[index % colors.length];
+                  const optionTextClass = textColors[index % textColors.length];
+                  const optionLabel = String.fromCharCode(65 + index);
+                  return (
+                    <div
+                      key={index}
+                      className={`relative ${
+                        images.length === 3 && index === 0 ? 'col-span-2' : ''
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-48 object-cover border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                      />
+                      <div
+                        className={`absolute top-2 left-2 z-10 px-2 py-0.5 border-4 border-black font-black text-[10px] md:text-xs rounded-sm ${optionTextClass}`}
+                        style={{ backgroundColor: optionColor }}
+                      >
+                        {optionLabel}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="border-t-4 border-black pt-4 space-y-2 text-sm font-bold">
+              <div>
+                Visibility:{' '}
+                {isPrivate
+                  ? `Private (code: ${accessCode.trim() || 'not set'})`
+                  : 'Public'}
+              </div>
+              <div>
+                Timed voting:{' '}
+                {enableTimedVoting
+                  ? (() => {
+                      if (!votingStartsAt || !votingEndsAt) {
+                        return 'Enabled, but start/end times not set';
+                      }
+                      const start = new Date(votingStartsAt);
+                      const end = new Date(votingEndsAt);
+                      if (
+                        Number.isNaN(start.getTime()) ||
+                        Number.isNaN(end.getTime())
+                      ) {
+                        return 'Enabled, but dates are not valid yet';
+                      }
+                      return `Opens ${start.toLocaleString()} · Closes ${end.toLocaleString()}`;
+                    })()
+                  : 'Always open for voting'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

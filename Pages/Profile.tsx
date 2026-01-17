@@ -13,7 +13,6 @@ type ProfileRow = {
   created_at: string;
   gender?: string | null;
   country?: string | null;
-  cohort?: string | null;
 };
 
 export default function Profile() {
@@ -21,13 +20,15 @@ export default function Profile() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isPublisher, setIsPublisher] = useState(false);
   const [activeTab, setActiveTab] = useState<"posts" | "votes">("posts");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileGenderInput, setProfileGenderInput] = useState("");
   const [profileCountryInput, setProfileCountryInput] = useState("");
-  const [profileCohortInput, setProfileCohortInput] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [publisherJobTitle, setPublisherJobTitle] = useState<string | null>(null);
+  const [publisherOrganization, setPublisherOrganization] = useState<string | null>(null);
   const [adminJobTitle, setAdminJobTitle] = useState<string | null>(null);
   const [adminOrganization, setAdminOrganization] = useState<string | null>(null);
   const [isEditingAdmin, setIsEditingAdmin] = useState(false);
@@ -59,9 +60,15 @@ export default function Profile() {
 
       setEmail(user.email ?? null);
 
+      const metadata = (user as any).user_metadata || {};
+      const intendedPublisher = !!metadata.intended_publisher;
+      setIsPublisher(intendedPublisher);
+      setPublisherJobTitle(metadata.publisher_job_title ?? null);
+      setPublisherOrganization(metadata.publisher_organization ?? null);
+
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, username, created_at, gender, country, cohort")
+        .select("id, username, created_at, gender, country")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -218,6 +225,9 @@ export default function Profile() {
   if (isAdmin) {
     roles.push("Admin");
   }
+  if (isPublisher) {
+    roles.push("Publisher");
+  }
   roles.push("Voter");
   const roleLabel = roles.join(", ");
 
@@ -233,7 +243,6 @@ export default function Profile() {
     setProfileError(null);
     setProfileGenderInput(profile.gender || "");
     setProfileCountryInput(profile.country || "");
-    setProfileCohortInput(profile.cohort || "");
     setIsEditingProfile(true);
   };
 
@@ -258,15 +267,14 @@ export default function Profile() {
 
       const updates: any = {
         gender: profileGenderInput || null,
-        country: profileCountryInput || null,
-        cohort: profileCohortInput || null
+        country: profileCountryInput || null
       };
 
       const { data, error } = await supabase
         .from("profiles")
         .update(updates)
         .eq("id", user.id)
-        .select("id, username, created_at, gender, country, cohort")
+        .select("id, username, created_at, gender, country")
         .maybeSingle();
 
       if (error) {
@@ -281,8 +289,7 @@ export default function Profile() {
         setProfile({
           ...profile,
           gender: updates.gender,
-          country: updates.country,
-          cohort: updates.cohort
+          country: updates.country
         });
       }
 
@@ -388,7 +395,7 @@ export default function Profile() {
               {new Date(profile.created_at).toLocaleString()}
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
             <div className="text-sm font-bold text-gray-600">Gender</div>
             <div className="font-bold">
@@ -399,12 +406,6 @@ export default function Profile() {
               <div className="text-sm font-bold text-gray-600">Country</div>
               <div className="font-bold">
                 {profile.country || "Not set"}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-bold text-gray-600">Cohort</div>
-              <div className="font-bold">
-                {profile.cohort || "Not set"}
               </div>
             </div>
           </div>
@@ -470,33 +471,6 @@ export default function Profile() {
                   ))}
                 </select>
               </div>
-              <div>
-                <div className="text-sm font-bold text-gray-600">Cohort</div>
-                <div className="flex gap-4 mt-1">
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input
-                      type="radio"
-                      name="edit-cohort"
-                      value="1"
-                      checked={profileCohortInput === "1"}
-                      onChange={() => setProfileCohortInput("1")}
-                      className="w-4 h-4"
-                    />
-                    <span>Cohort 1</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input
-                      type="radio"
-                      name="edit-cohort"
-                      value="2"
-                      checked={profileCohortInput === "2"}
-                      onChange={() => setProfileCohortInput("2")}
-                      className="w-4 h-4"
-                    />
-                    <span>Cohort 2</span>
-                  </label>
-                </div>
-              </div>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -514,6 +488,26 @@ export default function Profile() {
                 >
                   Cancel
                 </button>
+              </div>
+            </div>
+          )}
+
+          {isPublisher && (
+            <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
+              <div className="text-sm font-bold text-gray-600">Publisher details</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm font-bold text-gray-600">Job title or role</div>
+                  <div className="font-bold">
+                    {publisherJobTitle || "Not set"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-gray-600">Organization</div>
+                  <div className="font-bold">
+                    {publisherOrganization || "Not set"}
+                  </div>
+                </div>
               </div>
             </div>
           )}

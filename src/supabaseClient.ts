@@ -52,7 +52,7 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
 
   const { data: existing } = await supabase
     .from("profiles")
-    .select("id, username, created_at, is_banned, gender, country, cohort")
+    .select("id, username, created_at, is_banned, gender, country")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -61,25 +61,22 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
   const metadata = (user as any).user_metadata || {};
   const gender = metadata.gender ?? null;
   const country = metadata.country ?? null;
-  const cohort = metadata.cohort ?? null;
 
   if (existing) {
     const needsUpdate =
       (!existing.gender && gender) ||
-      (!existing.country && country) ||
-      (!existing.cohort && cohort);
+      (!existing.country && country);
 
     if (needsUpdate) {
       const updates: any = {};
       if (!existing.gender && gender) updates.gender = gender;
       if (!existing.country && country) updates.country = country;
-      if (!existing.cohort && cohort) updates.cohort = cohort;
 
       const { data: updated, error: updateError } = await supabase
         .from("profiles")
         .update(updates)
         .eq("id", user.id)
-        .select("id, username, created_at, is_banned, gender, country, cohort")
+        .select("id, username, created_at, is_banned, gender, country")
         .maybeSingle();
 
       if (updateError) {
@@ -100,8 +97,7 @@ export async function ensureUserProfile(user: { id: string; email?: string | nul
       id: user.id,
       username,
       gender,
-      country,
-      cohort
+      country
     })
     .select()
     .single();

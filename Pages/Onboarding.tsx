@@ -100,13 +100,17 @@ export default function Onboarding() {
 
       await ensureUserProfile(user);
 
-      await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({
           gender,
           country
         })
         .eq("id", user.id);
+
+      if (profileError) {
+        throw profileError;
+      }
 
       const metadata: Record<string, any> = {
         intended_publisher: publisher
@@ -117,9 +121,13 @@ export default function Onboarding() {
         metadata.publisher_organization = organization.trim();
       }
 
-      await supabase.auth.updateUser({
+      const { error: authError } = await supabase.auth.updateUser({
         data: metadata
       });
+
+      if (authError) {
+        throw authError;
+      }
 
       navigate(createPageUrl("Feed"), { replace: true });
     } catch (err: any) {
@@ -222,10 +230,9 @@ export default function Onboarding() {
 
             {showPublisherInfo && (
               <div className="mb-3 p-3 border-2 border-black bg-[#FFFF00] text-xs font-bold">
-                On ValidToT, everyone can vote and everyone can publish campaigns
-                with the same account. You only need admin rights to see deeper
-                analytics. You can also request an upgrade later if you start
-                publishing and need more insights.
+                On ValidToT, one account lets you vote and create campaigns.
+                Admin access is only needed for advanced analytics, and you can
+                upgrade anytime.
               </div>
             )}
 
@@ -308,4 +315,3 @@ export default function Onboarding() {
     </div>
   );
 }
-
