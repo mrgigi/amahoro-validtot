@@ -5,6 +5,67 @@ import { ArrowLeft, Upload, X, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
 
+const MAX_IMAGE_DIMENSION = 1600;
+const MAX_UNCOMPRESSED_BYTES = 1.5 * 1024 * 1024;
+
+const processImageFile = (file: File): Promise<Blob> => {
+  return new Promise((resolve) => {
+    if (file.size <= MAX_UNCOMPRESSED_BYTES) {
+      resolve(file);
+      return;
+    }
+
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let width = image.width;
+      let height = image.height;
+
+      if (width > height && width > MAX_IMAGE_DIMENSION) {
+        height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
+        width = MAX_IMAGE_DIMENSION;
+      } else if (height >= width && height > MAX_IMAGE_DIMENSION) {
+        width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
+        height = MAX_IMAGE_DIMENSION;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(image, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            resolve(file);
+          }
+        },
+        'image/jpeg',
+        0.8
+      );
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+
+    image.src = url;
+  });
+};
+
 export default function CreatePost() {
   const navigate = useNavigate();
   const [postType, setPostType] = useState('comparison');
@@ -57,42 +118,52 @@ export default function CreatePost() {
     }
 
     setUploading(true);
-    const newImages: string[] = [];
 
-    for (const file of files) {
-      try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
+    try {
+      const uploadPromises = files.map(async (file) => {
+        try {
+          const processed = await processImageFile(file);
+          const originalExt = file.name.split('.').pop() || '';
+          const lowerExt = originalExt.toLowerCase();
+          const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(lowerExt) ? lowerExt : 'jpg';
+          const fileName = `${Math.random().toString(36).slice(2)}.${safeExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('post-images')
-          .upload(filePath, file);
+          const { error: uploadError } = await supabase.storage
+            .from('post-images')
+            .upload(fileName, processed);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        const { data } = supabase.storage
-          .from('post-images')
-          .getPublicUrl(filePath);
+          const { data } = supabase.storage
+            .from('post-images')
+            .getPublicUrl(fileName);
 
-        newImages.push(data.publicUrl);
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Failed to upload image');
+          return data.publicUrl as string;
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          alert('Failed to upload one of the images');
+          return null;
+        }
+      });
+
+      const results = await Promise.all(uploadPromises);
+      const successful = results.filter((url): url is string => !!url);
+
+      if (successful.length === 0) {
+        return;
       }
-    }
 
-    const updatedImages = [...images, ...newImages];
-    setImages(updatedImages);
-    
-    // Add default options for new images
-    const newOptions = [...options];
-    for (let i = options.length; i < updatedImages.length; i++) {
-      newOptions.push(`Option ${String.fromCharCode(65 + i)}`);
+      const updatedImages = [...images, ...successful];
+      setImages(updatedImages);
+      
+      const newOptions = [...options];
+      for (let i = options.length; i < updatedImages.length; i++) {
+        newOptions.push(`Option ${String.fromCharCode(65 + i)}`);
+      }
+      setOptions(newOptions);
+    } finally {
+      setUploading(false);
     }
-    setOptions(newOptions);
-    
-    setUploading(false);
   };
 
   const removeImage = (index: number) => {
