@@ -143,6 +143,14 @@ export default function Onboarding() {
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("validtot_onboarding_completed", "true");
+        }
+      } catch (storageError) {
+        console.error("Failed to mark onboarding as completed:", storageError);
+      }
+
       navigate(createPageUrl("Feed"), { replace: true });
     } catch (err: any) {
       setError(err.message || "Failed to save your details. Please try again.");

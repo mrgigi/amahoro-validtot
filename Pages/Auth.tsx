@@ -375,7 +375,7 @@ export default function Auth() {
           </div>
           <div className="font-bold">
             {mode === "signup"
-              ? "Sign up to join campaigns and vote on ValidToT"
+              ? "Sign up to join campaigns and vote"
               : "Sign in to see campaigns and vote"}
           </div>
         </div>
