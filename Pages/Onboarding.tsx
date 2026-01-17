@@ -17,6 +17,7 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,13 +65,23 @@ export default function Onboarding() {
     e.preventDefault();
     setError(null);
 
-    if (!gender) {
-      setError("Please select your gender.");
+    if (step === 1) {
+      if (!gender) {
+        setError("Please select your gender.");
+        return;
+      }
+
+      setStep(2);
       return;
     }
 
-    if (!country) {
-      setError("Please select your country.");
+    if (step === 2) {
+      if (!country) {
+        setError("Please select your country.");
+        return;
+      }
+
+      setStep(3);
       return;
     }
 
@@ -182,7 +193,7 @@ export default function Onboarding() {
           </Link>
           <div className="text-right">
             <div className="text-xs font-bold text-gray-500">
-              Step 1 of 1
+              Step {step} of 3
             </div>
             <div className="text-xl font-black">
               Tell us about you
@@ -191,133 +202,139 @@ export default function Onboarding() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <div className="text-sm font-bold mb-1">Your gender</div>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm font-bold">
-                <input
-                  type="radio"
-                  name="gender"
-                  value="male"
-                  checked={gender === "male"}
-                  onChange={() => setGender("male")}
-                  className="w-4 h-4"
-                />
-                <span>Male</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm font-bold">
-                <input
-                  type="radio"
-                  name="gender"
-                  value="female"
-                  checked={gender === "female"}
-                  onChange={() => setGender("female")}
-                  className="w-4 h-4"
-                />
-                <span>Female</span>
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <div className="text-sm font-bold mb-1">Your country</div>
-            <select
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-            >
-              <option value="">Select a country</option>
-              {COUNTRY_OPTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="border-2 border-black p-4 bg-[#F9F9F9]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-bold">
-                How will you use ValidToT?
+          {step === 1 && (
+            <div>
+              <div className="text-sm font-bold mb-1">Your gender</div>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm font-bold">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="male"
+                    checked={gender === "male"}
+                    onChange={() => setGender("male")}
+                    className="w-4 h-4"
+                  />
+                  <span>Male</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm font-bold">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="female"
+                    checked={gender === "female"}
+                    onChange={() => setGender("female")}
+                    className="w-4 h-4"
+                  />
+                  <span>Female</span>
+                </label>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowPublisherInfo((prev) => !prev)}
-                className="flex items-center gap-1 text-xs font-bold"
+            </div>
+          )}
+
+          {step === 2 && (
+            <div>
+              <div className="text-sm font-bold mb-1">Your country</div>
+              <select
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
               >
-                <Info className="w-4 h-4" />
-                <span>About roles</span>
-              </button>
+                <option value="">Select a country</option>
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </div>
+          )}
 
-            {showPublisherInfo && (
-              <div className="mb-3 p-3 border-2 border-black bg-[#FFFF00] text-xs font-bold">
-                On ValidToT, one account lets you vote and create campaigns.
-                Admin access is only needed for advanced analytics, and you can
-                upgrade anytime.
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked
-                  disabled
-                  className="w-4 h-4"
-                />
+          {step === 3 && (
+            <div className="border-2 border-black p-4 bg-[#F9F9F9]">
+              <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-bold">
-                  Voter
-                  <span className="ml-1 text-xs font-bold text-gray-500">
-                    (always enabled)
-                  </span>
+                  How will you use ValidToT?
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPublisherInfo((prev) => !prev)}
+                  className="flex items-center gap-1 text-xs font-bold"
+                >
+                  <Info className="w-4 h-4" />
+                  <span>About roles</span>
+                </button>
+              </div>
+
+              {showPublisherInfo && (
+                <div className="mb-3 p-3 border-2 border-black bg-[#FFFF00] text-xs font-bold">
+                  On ValidToT, one account lets you vote and create campaigns.
+                  Admin access is only needed for advanced analytics, and you can
+                  upgrade anytime.
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked
+                    disabled
+                    className="w-4 h-4"
+                  />
+                  <div className="text-sm font-bold">
+                    Voter
+                    <span className="ml-1 text-xs font-bold text-gray-500">
+                      (always enabled)
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={publisher}
+                    onChange={(e) => setPublisher(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <div className="text-sm font-bold">
+                    Publisher
+                    <span className="ml-1 text-xs font-bold text-gray-500">
+                      (create campaigns, request deeper analytics)
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={publisher}
-                  onChange={(e) => setPublisher(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <div className="text-sm font-bold">
-                  Publisher
-                  <span className="ml-1 text-xs font-bold text-gray-500">
-                    (create campaigns, request deeper analytics)
-                  </span>
+
+              {publisher && (
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <div className="text-sm font-bold mb-1">
+                      Your organization
+                    </div>
+                    <input
+                      type="text"
+                      value={organization}
+                      onChange={(e) => setOrganization(e.target.value)}
+                      className="w-full p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                      placeholder="e.g. Campaign or organization name"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold mb-1">
+                      Job title or role
+                    </div>
+                    <input
+                      type="text"
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                      className="w-full p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                      placeholder="e.g. Campaign manager"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
-
-            {publisher && (
-              <div className="mt-3 space-y-3">
-                <div>
-                  <div className="text-sm font-bold mb-1">
-                    Your organization
-                  </div>
-                  <input
-                    type="text"
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    className="w-full p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                    placeholder="e.g. Campaign or organization name"
-                  />
-                </div>
-                <div>
-                  <div className="text-sm font-bold mb-1">
-                    Job title or role
-                  </div>
-                  <input
-                    type="text"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    className="w-full p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                    placeholder="e.g. Campaign manager"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {error && (
             <div className="p-3 border-4 border-black bg-red-100 font-bold text-sm">
@@ -330,7 +347,11 @@ export default function Onboarding() {
             disabled={saving}
             className="w-full p-3 bg-[#FF006E] text-white border-4 border-black font-black text-lg shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? "Saving..." : "Continue to home feed"}
+            {saving
+              ? "Saving..."
+              : step === 3
+              ? "Continue to home feed"
+              : "Continue"}
           </button>
         </form>
       </div>
