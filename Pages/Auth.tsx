@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase, checkAdminRole } from "../src/supabaseClient";
+import { supabase, ensureUserProfile } from "../src/supabaseClient";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -203,14 +203,8 @@ export const COUNTRY_OPTIONS = [
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [gender, setGender] = useState<"male" | "female" | "">("");
-  const [country, setCountry] = useState("");
-  const [cohort, setCohort] = useState<"1" | "2" | "">("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [organization, setOrganization] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"signup" | "signin">("signin");
-  const [authRole, setAuthRole] = useState<"voter" | "admin">("voter");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -258,18 +252,6 @@ export default function Auth() {
         if (!passwordIsStrongEnough(password)) {
           throw new Error("Password must be at least 8 characters and include a letter and a number.");
         }
-        if (authRole === "admin") {
-          if (!jobTitle.trim()) {
-            throw new Error("Please enter your job title or role to sign up as an Admin.");
-          }
-          if (!organization.trim()) {
-            throw new Error("Please enter your organization to sign up as an Admin.");
-          }
-        } else {
-          if (!gender || !country || !cohort) {
-            throw new Error("Please select your gender, country, and cohort to sign up.");
-          }
-        }
 
         const { data: emailExists, error: rpcError } = await supabase.rpc("email_exists", {
           email_arg: email,
@@ -284,16 +266,6 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: {
-              gender: authRole === "voter" ? gender : null,
-              country: authRole === "voter" ? country : null,
-              cohort: authRole === "voter" ? cohort : null,
-              intended_role: authRole,
-              job_title: authRole === "admin" ? jobTitle : null,
-              organization: authRole === "admin" ? organization : null,
-            },
-          },
         });
         if (error) {
           const message = error.message || "";
@@ -339,9 +311,19 @@ export default function Auth() {
         } = await supabase.auth.getUser();
 
         if (user) {
-          const role = await checkAdminRole(user.id);
-          if (role) {
-            navigate("/admin", { replace: true });
+          await ensureUserProfile(user);
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("gender, country")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const needsOnboarding =
+            !profile || !profile.gender || !profile.country;
+
+          if (needsOnboarding) {
+            navigate("/onboarding", { replace: true });
             return;
           }
         }
@@ -393,12 +375,8 @@ export default function Auth() {
           </div>
           <div className="font-bold">
             {mode === "signup"
-              ? authRole === "admin"
-                ? "Sign up as an Admin to create polls and see analytics"
-                : "Sign up as a Voter to join campaigns and vote"
-              : authRole === "admin"
-                ? "Sign in as an Admin to manage polls and analytics"
-                : "Sign in as a Voter to see polls and vote"}
+              ? "Sign up to join campaigns and vote on ValidToT"
+              : "Sign in to see campaigns and vote"}
           </div>
         </div>
 
@@ -409,28 +387,6 @@ export default function Auth() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={() => setAuthRole("voter")}
-              className={`w-full p-3 border-4 border-black font-black text-sm ${
-                authRole === "voter" ? "bg-[#00FF00]" : "bg-white"
-              }`}
-            >
-              {mode === "signup" ? "Sign up as Voter" : "Sign in as Voter"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setAuthRole("admin")}
-              className={`w-full p-3 border-4 border-black font-black text-sm ${
-                authRole === "admin" ? "bg-[#FFFF00]" : "bg-white"
-              }`}
-            >
-              {mode === "signup" ? "Sign up as Admin" : "Sign in as Admin"}
-            </button>
-          </div>
-
           <div>
             <label className="block text-sm font-bold mb-1">Email</label>
             <input
@@ -475,107 +431,6 @@ export default function Auth() {
               </button>
             )}
           </div>
-
-          {mode === "signup" && authRole === "admin" && (
-            <>
-              <div>
-                <label className="block text-sm font-bold mb-1">Job title or role</label>
-                <input
-                  type="text"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                  placeholder="e.g. Campaign manager"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">Organization</label>
-                <input
-                  type="text"
-                  value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
-                  className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                  placeholder="e.g. Organization or campaign name"
-                />
-              </div>
-            </>
-          )}
-
-          {mode === "signup" && authRole === "voter" && (
-            <>
-              <div>
-                <label className="block text-sm font-bold mb-1">Gender</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="male"
-                      checked={gender === "male"}
-                      onChange={() => setGender("male")}
-                      className="w-4 h-4"
-                    />
-                    <span>Male</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input
-                      type="radio"
-                      name="gender"
-                      value="female"
-                      checked={gender === "female"}
-                      onChange={() => setGender("female")}
-                      className="w-4 h-4"
-                    />
-                    <span>Female</span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-1">Country</label>
-                <select
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                >
-                  <option value="">Select a country</option>
-                  {COUNTRY_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-1">Cohort</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input
-                      type="radio"
-                      name="cohort"
-                      value="1"
-                      checked={cohort === "1"}
-                      onChange={() => setCohort("1")}
-                      className="w-4 h-4"
-                    />
-                    <span>Cohort 1</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-bold">
-                    <input
-                      type="radio"
-                      name="cohort"
-                      value="2"
-                      checked={cohort === "2"}
-                      onChange={() => setCohort("2")}
-                      className="w-4 h-4"
-                    />
-                    <span>Cohort 2</span>
-                  </label>
-                </div>
-              </div>
-            </>
-          )}
 
           {error && (
             <div className="p-3 border-4 border-black bg-red-100 font-bold text-sm">

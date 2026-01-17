@@ -5,6 +5,7 @@ import AdminDashboard from "../Pages/AdminDashboard";
 import Profile from "../Pages/Profile";
 import Feed from "../Pages/Feed";
 import Auth from "../Pages/Auth";
+import Onboarding from "../Pages/Onboarding";
 import { supabase, ensureUserProfile } from "./supabaseClient";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -126,6 +127,12 @@ export default function App() {
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/onboarding" element={
+          <ProtectedRoute>
+            <Onboarding />
           </ProtectedRoute>
         } />
 
