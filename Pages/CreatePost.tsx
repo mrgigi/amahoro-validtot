@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase, checkAdminRole } from '../src/supabaseClient';
+import { supabase } from '../src/supabaseClient';
 import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Upload, X, Loader } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -120,14 +120,6 @@ export default function CreatePost() {
 
     if (!user) {
       navigate('/auth', { replace: true });
-      return;
-    }
-
-    const role = await checkAdminRole(user.id);
-
-    if (!role) {
-      alert('Only admins can create posts.');
-      navigate('/', { replace: true });
       return;
     }
 

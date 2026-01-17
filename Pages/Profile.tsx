@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../src/supabaseClient";
+import { supabase, checkAdminRole } from "../src/supabaseClient";
 import { ArrowLeft, User, LogOut, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -56,18 +56,25 @@ export default function Profile() {
         setProfile(data as ProfileRow);
       }
 
-      const { data: adminRow, error: adminError } = await supabase
-        .from("admins")
-        .select("role, organization, job_title")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const role = await checkAdminRole(user.id);
+      const isAdminUser = !!role;
+      setIsAdmin(isAdminUser);
 
-      if (!adminError && adminRow) {
-        setIsAdmin(true);
-        setAdminJobTitle((adminRow as any).job_title ?? null);
-        setAdminOrganization((adminRow as any).organization ?? null);
+      if (isAdminUser) {
+        const { data: adminRow, error: adminError } = await supabase
+          .from("admins")
+          .select("organization, job_title")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!adminError && adminRow) {
+          setAdminJobTitle((adminRow as any).job_title ?? null);
+          setAdminOrganization((adminRow as any).organization ?? null);
+        } else {
+          setAdminJobTitle(null);
+          setAdminOrganization(null);
+        }
       } else {
-        setIsAdmin(false);
         setAdminJobTitle(null);
         setAdminOrganization(null);
       }
@@ -133,7 +140,12 @@ export default function Profile() {
     );
   }
 
-  const roleLabel = isAdmin ? "Admin" : "Voter";
+  const roles: string[] = [];
+  if (isAdmin) {
+    roles.push("Admin");
+  }
+  roles.push("Voter");
+  const roleLabel = roles.join(", ");
 
   const handleStartEditAdmin = () => {
     setAdminError(null);
@@ -217,7 +229,7 @@ export default function Profile() {
             </div>
           )}
           <div>
-            <div className="text-sm font-bold text-gray-600">Role</div>
+            <div className="text-sm font-bold text-gray-600">Roles</div>
             <div className="font-bold">
               {roleLabel}
             </div>
