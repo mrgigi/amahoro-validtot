@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { supabase } from '../src/supabaseClient';
 import { useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Upload, X, Loader } from 'lucide-react';
@@ -21,6 +21,7 @@ export default function CreatePost() {
   const [enableTimedVoting, setEnableTimedVoting] = useState(false);
   const [votingStartsAt, setVotingStartsAt] = useState('');
   const [votingEndsAt, setVotingEndsAt] = useState('');
+  const isSubmittingRef = useRef(false);
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: any) => {
@@ -135,6 +136,9 @@ export default function CreatePost() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) {
+      return;
+    }
     setSubmitError(null);
     
     if (images.length < 2) {
@@ -174,6 +178,8 @@ export default function CreatePost() {
       }
     }
 
+    isSubmittingRef.current = true;
+
     const {
       data: { user }
     } = await supabase.auth.getUser();
@@ -206,7 +212,16 @@ export default function CreatePost() {
       postData.voting_ends_at = end.toISOString();
     }
 
-    createPostMutation.mutate(postData);
+    createPostMutation.mutate(postData, {
+      onError: (error: any) => {
+        console.error('Error creating post:', error);
+        const message =
+          (error && (error.message || error.error_description || error.details)) ||
+          'Failed to create post. Please try again.';
+        setSubmitError(message);
+        isSubmittingRef.current = false;
+      }
+    });
   };
 
   return (

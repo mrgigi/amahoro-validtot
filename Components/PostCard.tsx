@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Share2, Flag, Eye, Check, Lock } from 'lucide-react';
+import { Share2, MoreVertical, Eye, Check, Lock } from 'lucide-react';
 import ImageViewer from './ImageViewer';
 import VoteInterface from './VoteInterface';
 import CommentSection from './CommentSection';
@@ -20,6 +20,9 @@ export default function PostCard({ post }) {
   const [unlockCode, setUnlockCode] = useState('');
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,6 +106,19 @@ export default function PostCard({ post }) {
       isMounted = false;
     };
   }, [post.id]);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsOwner(!!user && user.id === post.created_by);
+      } catch (error) {
+        console.error('Error checking owner status:', error);
+        setIsOwner(false);
+      }
+    };
+    loadUser();
+  }, [post.created_by]);
 
   const voteMutation = useMutation({
     mutationFn: async ({ optionIndex, userId }: { optionIndex: number, userId: string }) => {
@@ -230,6 +246,41 @@ export default function PostCard({ post }) {
     alert('Report submitted. Thanks for keeping ValidToT safe!');
   };
 
+  const handleDeletePost = async () => {
+    if (isDeleting) {
+      return;
+    }
+    const confirmed = window.confirm('Are you sure you want to delete this post?');
+    if (!confirmed) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.id !== post.created_by) {
+        alert('You can only delete posts you created.');
+        return;
+      }
+      const { error } = await supabase
+        .from('posts')
+        .update({ is_hidden: true })
+        .eq('id', post.id);
+      if (error) {
+        console.error('Error deleting post:', error);
+        alert('Failed to delete post. Please try again.');
+        return;
+      }
+      setMenuOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      alert('Post deleted.');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      alert('Failed to delete post. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const votingStartsAt = post.voting_starts_at ? new Date(post.voting_starts_at) : null;
   const votingEndsAt = post.voting_ends_at ? new Date(post.voting_ends_at) : null;
 
@@ -342,12 +393,37 @@ export default function PostCard({ post }) {
               </div>
             )}
           </div>
-          <button
-            onClick={() => setReportModalOpen(true)}
-            className="p-2 bg-red-500 text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-          >
-            <Flag className="w-5 h-5" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((open) => !open)}
+              className="p-2 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-50">
+                {isOwner ? (
+                  <button
+                    onClick={handleDeletePost}
+                    disabled={isDeleting}
+                    className="w-full px-3 py-2 text-left font-black text-sm text-red-600 hover:bg-[#F5F5F5] disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setReportModalOpen(true);
+                    }}
+                    className="w-full px-3 py-2 text-left font-black text-sm hover:bg-[#F5F5F5]"
+                  >
+                    Report
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Images */}
