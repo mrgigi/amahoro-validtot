@@ -405,7 +405,11 @@ export default function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-3 pr-12 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                placeholder="At least 6 characters"
+                placeholder={
+                  mode === "signup"
+                    ? "At least 8 characters, include a letter and a number"
+                    : "Your password"
+                }
               />
               <button
                 type="button"
