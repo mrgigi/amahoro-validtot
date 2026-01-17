@@ -24,6 +24,9 @@ export default function PostCard({ post }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const optionColors = ['#FF006E', '#0066FF', '#FFFF00'];
+  const optionTextColors = ['text-white', 'text-white', 'text-black'];
+
   useEffect(() => {
     setIsUnlocked(!post.is_private);
   }, [post.id, post.is_private]);
@@ -285,6 +288,9 @@ export default function PostCard({ post }) {
           'grid-cols-2'
         }`}>
           {(post.images || []).map((image, index) => {
+            const optionColor = optionColors[index % optionColors.length];
+            const optionTextClass = optionTextColors[index % optionTextColors.length];
+            const optionLabel = String.fromCharCode(65 + index);
             const isVotedImage = hasVoted && userVote === index;
             return (
               <div
@@ -304,12 +310,22 @@ export default function PostCard({ post }) {
                     isVotedImage ? 'border-[#00FF00] border-8' : 'border-black'
                   } ${isLocked ? 'opacity-75' : ''}`}
                 />
+                <div
+                  className="absolute inset-0 z-10 opacity-30 mix-blend-multiply pointer-events-none"
+                  style={{ backgroundColor: optionColor }}
+                />
+                <div
+                  className={`absolute top-2 left-2 z-30 px-3 py-1 border-4 border-black font-black text-xs md:text-sm ${optionTextClass}`}
+                  style={{ backgroundColor: optionColor }}
+                >
+                  Option {optionLabel}
+                </div>
                 {isVotedImage && (
-                  <div className="absolute top-2 right-2 bg-[#00FF00] border-4 border-black p-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="absolute top-2 right-2 z-30 bg-[#00FF00] border-4 border-black p-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                     <Check className="w-6 h-6 text-black" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
+                <div className="absolute inset-0 z-20 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
                   <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>

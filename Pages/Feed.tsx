@@ -8,12 +8,15 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '../src/lib/utils';
 
 export default function Feed() {
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const pullStartYRef = useRef<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [showSearch, setShowSearch] = useState(false);
 
-  const { data: allPosts = [], isLoading } = useQuery({
+  const { data: allPosts = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ['posts'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -70,6 +73,35 @@ export default function Feed() {
     }
   }, []);
 
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    if (containerRef.current.scrollTop === 0) {
+      pullStartYRef.current = event.touches[0].clientY;
+      setIsPulling(true);
+    }
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!isPulling || pullStartYRef.current === null) return;
+    const currentY = event.touches[0].clientY;
+    const distance = currentY - pullStartYRef.current;
+    if (distance > 0) {
+      setPullDistance(Math.min(distance, 120));
+    } else {
+      setPullDistance(0);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    const threshold = 60;
+    if (pullDistance >= threshold) {
+      refetch();
+    }
+    setIsPulling(false);
+    setPullDistance(0);
+    pullStartYRef.current = null;
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#F5F5F5] p-4">
@@ -101,7 +133,12 @@ export default function Feed() {
       <div className="h-screen w-full flex items-center justify-center bg-[#F5F5F5] p-4">
         <div className="text-center max-w-md">
           <div className="text-6xl font-black mb-4 transform -rotate-2">ValidToT</div>
-          <div className="text-xl font-bold mb-8">No posts yet! Be the first to create one.</div>
+          <div className="text-xl font-bold mb-4">No posts yet! Be the first to create one.</div>
+          <ul className="text-left text-sm font-bold text-gray-800 mb-8 space-y-2">
+            <li>• Get instant, honest votes so you can make decisions with confidence.</li>
+            <li>• Cut through endless group chats and see clear results in seconds.</li>
+            <li>• Turn any choice into a fun game your friends actually respond to.</li>
+          </ul>
           <Link
             to={createPageUrl('CreatePost')}
             className="inline-flex items-center gap-2 px-8 py-4 bg-[#FF006E] text-white border-4 border-black font-black text-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
@@ -156,7 +193,26 @@ export default function Feed() {
         ref={containerRef}
         className="h-full overflow-y-scroll"
         style={{ scrollBehavior: 'smooth' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        <div
+          className="flex items-center justify-center text-xs font-bold text-gray-600"
+          style={{
+            height: pullDistance > 0 || isFetching ? 40 : 0,
+            opacity: pullDistance > 0 || isFetching ? 1 : 0,
+            transition: 'height 0.15s ease, opacity 0.15s ease'
+          }}
+        >
+          {isFetching
+            ? 'Refreshing feed…'
+            : pullDistance > 60
+            ? 'Release to refresh'
+            : pullDistance > 0
+            ? 'Pull to refresh'
+            : null}
+        </div>
         {/* Search Filters - toggleable */}
         {showSearch && (
           <div className="sticky top-14 z-10 max-w-2xl mx-auto px-4 pt-2">
