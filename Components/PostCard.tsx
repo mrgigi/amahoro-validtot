@@ -234,6 +234,26 @@ export default function PostCard({ post }) {
     }
   };
 
+  const handleOpenReport = async () => {
+    try {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setMenuOpen(false);
+        navigate('/auth', { state: { from: location } });
+        return;
+      }
+
+      setMenuOpen(false);
+      setReportModalOpen(true);
+    } catch (error) {
+      console.error('Error checking auth for report:', error);
+      alert('Please sign in to report this post.');
+    }
+  };
+
   const handleReport = async (reason, details) => {
     await supabase.from('reports').insert({
       reported_item_id: post.id,
@@ -412,10 +432,7 @@ export default function PostCard({ post }) {
                   </button>
                 ) : (
                   <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setReportModalOpen(true);
-                    }}
+                    onClick={handleOpenReport}
                     className="w-full px-3 py-2 text-left font-black text-sm hover:bg-[#F5F5F5]"
                   >
                     Report
@@ -451,9 +468,10 @@ export default function PostCard({ post }) {
                 <img
                   src={image}
                   alt={`Post image ${index + 1}`}
-                  className={`w-full h-64 object-cover border-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${
-                    isVotedImage ? 'border-[#00FF00] border-8' : 'border-black'
-                  } ${isLocked ? 'opacity-75' : ''}`}
+                  loading="lazy"
+                  className={`w-full h-64 object-cover border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${
+                    isLocked ? 'opacity-75' : ''
+                  }`}
                 />
                 <div
                   className={`absolute top-2 left-2 z-30 px-2 py-0.5 border-4 border-black font-black text-[10px] md:text-xs rounded-sm ${optionTextClass}`}
