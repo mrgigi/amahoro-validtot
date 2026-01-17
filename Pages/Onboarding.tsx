@@ -45,9 +45,14 @@ export default function Onboarding() {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("gender, country, age_range")
+          .select("gender, country, age_range, onboarding_complete")
           .eq("id", user.id)
           .maybeSingle();
+
+        if (profile && (profile as any).onboarding_complete) {
+          navigate(createPageUrl("Feed"), { replace: true });
+          return;
+        }
 
         if (profile) {
           if (profile.gender) {
