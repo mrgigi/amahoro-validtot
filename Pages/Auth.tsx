@@ -3,7 +3,7 @@ import { supabase, checkAdminRole } from "../src/supabaseClient";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
-const COUNTRY_OPTIONS = [
+export const COUNTRY_OPTIONS = [
   "Afghanistan",
   "Albania",
   "Algeria",

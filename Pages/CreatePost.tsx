@@ -27,8 +27,23 @@ export default function CreatePost() {
       if (error) throw error;
       return data;
     },
-    onSuccess: async (_createdPost) => {
-      navigate(createPageUrl('Feed'));
+    onSuccess: async (createdPost) => {
+      const isPrivatePost = !!createdPost.is_private;
+      const postId = createdPost.id as string | undefined;
+      const code = isPrivatePost ? (createdPost.access_code as string | null) : null;
+
+      const params = new URLSearchParams();
+      if (postId) {
+        params.set('postId', postId);
+      }
+      if (isPrivatePost && code) {
+        params.set('code', code);
+      }
+
+      const baseUrl = createPageUrl('Feed');
+      const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+
+      navigate(url);
     },
     onError: (error: any) => {
       console.error('Error creating post:', error);

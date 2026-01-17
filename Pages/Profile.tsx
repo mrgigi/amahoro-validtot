@@ -4,6 +4,7 @@ import { ArrowLeft, User, LogOut, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { createPageUrl } from "../src/lib/utils";
+import { COUNTRY_OPTIONS } from "./Auth";
 
 type ProfileRow = {
   id: string;
@@ -380,13 +381,18 @@ export default function Profile() {
               </div>
               <div>
                 <div className="text-sm font-bold text-gray-600">Country</div>
-                <input
-                  type="text"
+                <select
                   value={profileCountryInput}
                   onChange={(e) => setProfileCountryInput(e.target.value)}
                   className="w-full mt-1 p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                  placeholder="Enter your country"
-                />
+                >
+                  <option value="">Select a country</option>
+                  {COUNTRY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <div className="text-sm font-bold text-gray-600">Cohort</div>
