@@ -14,6 +14,7 @@ export default function CreatePost() {
   const [uploading, setUploading] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [accessCode, setAccessCode] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: any) => {
@@ -28,6 +29,13 @@ export default function CreatePost() {
     },
     onSuccess: async (_createdPost) => {
       navigate(createPageUrl('Feed'));
+    },
+    onError: (error: any) => {
+      console.error('Error creating post:', error);
+      const message =
+        (error && (error.message || error.error_description || error.details)) ||
+        'Failed to create post. Please try again.';
+      setSubmitError(message);
     }
   });
 
@@ -103,6 +111,7 @@ export default function CreatePost() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     
     if (images.length < 2) {
       alert('Please add at least 2 images for comparison');
@@ -310,6 +319,11 @@ export default function CreatePost() {
           </div>
 
           {/* Submit */}
+          {submitError && (
+            <div className="p-3 border-4 border-black bg-red-100 text-xs font-bold mb-2">
+              {submitError}
+            </div>
+          )}
           <button
             type="submit"
             disabled={createPostMutation.isPending || uploading}
