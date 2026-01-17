@@ -3,6 +3,17 @@ import { supabase, ensureUserProfile } from "../src/supabaseClient";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
+function hasCompletedOnboarding() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return localStorage.getItem("validtot_onboarding_completed") === "true";
+  } catch {
+    return false;
+  }
+}
+
 export const COUNTRY_OPTIONS = [
   "Afghanistan",
   "Albania",
@@ -322,7 +333,9 @@ export default function Auth() {
           const needsOnboarding =
             !profile || !profile.gender || !profile.country;
 
-          if (needsOnboarding) {
+          const completed = hasCompletedOnboarding();
+
+          if (!completed && needsOnboarding) {
             navigate("/onboarding", { replace: true });
             return;
           }
