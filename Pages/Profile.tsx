@@ -19,10 +19,10 @@ export default function Profile() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [adminJobTitle, setAdminJobTitle] = useState<string | null>(null);
   const [adminOrganization, setAdminOrganization] = useState<string | null>(null);
   const [isEditingAdmin, setIsEditingAdmin] = useState(false);
-  const [adminRoleInput, setAdminRoleInput] = useState("");
+  const [adminJobTitleInput, setAdminJobTitleInput] = useState("");
   const [adminOrganizationInput, setAdminOrganizationInput] = useState("");
   const [savingAdmin, setSavingAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
@@ -58,17 +58,17 @@ export default function Profile() {
 
       const { data: adminRow, error: adminError } = await supabase
         .from("admins")
-        .select("role, organization")
+        .select("role, organization, job_title")
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (!adminError && adminRow) {
         setIsAdmin(true);
-        setAdminRole((adminRow as any).role ?? null);
+        setAdminJobTitle((adminRow as any).job_title ?? null);
         setAdminOrganization((adminRow as any).organization ?? null);
       } else {
         setIsAdmin(false);
-        setAdminRole(null);
+        setAdminJobTitle(null);
         setAdminOrganization(null);
       }
 
@@ -137,7 +137,7 @@ export default function Profile() {
 
   const handleStartEditAdmin = () => {
     setAdminError(null);
-    setAdminRoleInput(adminRole ?? "");
+    setAdminJobTitleInput(adminJobTitle ?? "");
     setAdminOrganizationInput(adminOrganization ?? "");
     setIsEditingAdmin(true);
   };
@@ -162,7 +162,7 @@ export default function Profile() {
       }
 
       const updates: any = {
-        role: adminRoleInput || null,
+        job_title: adminJobTitleInput || null,
         organization: adminOrganizationInput || null,
       };
 
@@ -177,7 +177,7 @@ export default function Profile() {
         return;
       }
 
-      setAdminRole(updates.role);
+      setAdminJobTitle(updates.job_title);
       setAdminOrganization(updates.organization);
       setIsEditingAdmin(false);
     } catch (err: any) {
@@ -267,9 +267,9 @@ export default function Profile() {
               {!isEditingAdmin && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-bold text-gray-600">Admin role</div>
+                    <div className="text-sm font-bold text-gray-600">Job title or role</div>
                     <div className="font-bold">
-                      {adminRole || "Not set"}
+                      {adminJobTitle || "Not set"}
                     </div>
                   </div>
                   <div>
@@ -289,11 +289,11 @@ export default function Profile() {
                     </div>
                   )}
                   <div>
-                    <div className="text-sm font-bold text-gray-600">Admin role</div>
+                    <div className="text-sm font-bold text-gray-600">Job title or role</div>
                     <input
                       type="text"
-                      value={adminRoleInput}
-                      onChange={(e) => setAdminRoleInput(e.target.value)}
+                      value={adminJobTitleInput}
+                      onChange={(e) => setAdminJobTitleInput(e.target.value)}
                       className="w-full p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
                       placeholder="e.g. Campaign manager"
                     />

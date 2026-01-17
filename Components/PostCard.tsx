@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Share2, Flag, Eye, Check } from 'lucide-react';
+import { Share2, Flag, Eye, Check, Lock } from 'lucide-react';
 import ImageViewer from './ImageViewer';
 import VoteInterface from './VoteInterface';
 import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
-import { supabase } from '../src/supabaseClient';
+import { supabase, checkPostCode } from '../src/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createPageUrl } from '../src/lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -16,9 +16,17 @@ export default function PostCard({ post }) {
   const [hasVoted, setHasVoted] = useState(false);
   const [userVote, setUserVote] = useState(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(!post.is_private);
+  const [unlockCode, setUnlockCode] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    setIsUnlocked(!post.is_private);
+  }, [post.id, post.is_private]);
 
   useEffect(() => {
     let isMounted = true;
@@ -221,14 +229,47 @@ export default function PostCard({ post }) {
     await voteMutation.mutateAsync({ optionIndex: option, userId: user.id });
   };
 
+  const handleUnlock = async () => {
+    if (!unlockCode.trim()) {
+      setUnlockError('Enter the access code for this post.');
+      return;
+    }
+    setUnlocking(true);
+    setUnlockError(null);
+    try {
+      const ok = await checkPostCode(post.id, unlockCode.trim());
+      if (!ok) {
+        setUnlockError('Incorrect access code. Try again.');
+        return;
+      }
+      setIsUnlocked(true);
+      setUnlockCode('');
+    } catch (error: any) {
+      setUnlockError(error.message || 'Failed to check access code.');
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  const isPrivate = !!post.is_private;
+  const isLocked = isPrivate && !isUnlocked;
+
   return (
     <div className="w-full bg-[#F5F5F5]">
       <div className="max-w-2xl mx-auto p-4 pb-8 pt-4">
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
-          <h1 className="text-3xl font-black leading-tight pr-4 transform -rotate-1">
-            {post.title}
-          </h1>
+          <div>
+            <h1 className="text-3xl font-black leading-tight pr-4 transform -rotate-1">
+              {post.title}
+            </h1>
+            {isLocked && (
+              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-black text-[#FFFF00] border-4 border-black font-black text-xs">
+                <Lock className="w-4 h-4" />
+                <span>Private post • locked with code</span>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setReportModalOpen(true)}
             className="p-2 bg-red-500 text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
@@ -261,7 +302,7 @@ export default function PostCard({ post }) {
                   alt={`Post image ${index + 1}`}
                   className={`w-full h-64 object-cover border-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] ${
                     isVotedImage ? 'border-[#00FF00] border-8' : 'border-black'
-                  }`}
+                  } ${isLocked ? 'opacity-75' : ''}`}
                 />
                 {isVotedImage && (
                   <div className="absolute top-2 right-2 bg-[#00FF00] border-4 border-black p-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -276,24 +317,58 @@ export default function PostCard({ post }) {
           })}
         </div>
 
-        {!hasVoted && (
+        {isLocked && (
+          <div className="mb-4 p-3 bg-white border-4 border-black font-bold text-center text-sm">
+            This post is private. Enter the access code from the organizer to unlock and vote.
+          </div>
+        )}
+
+        {!isLocked && !hasVoted && (
           <div className="mb-4 p-3 bg-white border-4 border-black font-bold text-center">
             {`${post.total_votes || 0} vote${(post.total_votes || 0) !== 1 ? 's' : ''}`} • {post.comment_count || 0} comment{(post.comment_count || 0) !== 1 ? 's' : ''}
           </div>
         )}
 
-        {!hasVoted && (
+        {!isLocked && !hasVoted && (
           <div className="mb-4 p-3 bg-black text-[#FFFF00] border-4 border-black font-black text-center text-sm md:text-base">
             Vote once to unlock live results. Your vote cannot be changed.
           </div>
         )}
 
-        <VoteInterface
-          post={post}
-          onVote={handleVoteAction}
-          hasVoted={hasVoted}
-          userVote={userVote}
-        />
+        {isLocked ? (
+          <div className="mb-4 p-3 bg-white border-4 border-black">
+            {unlockError && (
+              <div className="mb-2 text-xs font-bold text-red-600">
+                {unlockError}
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={unlockCode}
+                onChange={(e) => setUnlockCode(e.target.value)}
+                className="flex-1 p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                placeholder="Enter access code"
+              />
+              <button
+                type="button"
+                onClick={handleUnlock}
+                disabled={unlocking}
+                className="px-4 py-3 bg-black text-[#FFFF00] border-4 border-black font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {unlocking ? 'Checking...' : 'Unlock'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <VoteInterface
+            post={post}
+            onVote={handleVoteAction}
+            hasVoted={hasVoted}
+            userVote={userVote}
+          />
+        )
+        }
 
         {/* Share Button */}
         <button
@@ -304,8 +379,7 @@ export default function PostCard({ post }) {
           SHARE
         </button>
 
-        {/* Comments - Only accessible after voting */}
-        {hasVoted && <CommentSection post={post} />}
+        {hasVoted && !isLocked && <CommentSection post={post} />}
 
 
       </div>

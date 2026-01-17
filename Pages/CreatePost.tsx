@@ -12,6 +12,8 @@ export default function CreatePost() {
   const [images, setImages] = useState<string[]>([]);
   const [options, setOptions] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [accessCode, setAccessCode] = useState('');
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: any) => {
@@ -89,11 +91,26 @@ export default function CreatePost() {
     setOptions(newOptions);
   };
 
+  const handleGenerateCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      const index = Math.floor(Math.random() * chars.length);
+      code += chars[index];
+    }
+    setAccessCode(code);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (images.length < 2) {
       alert('Please add at least 2 images for comparison');
+      return;
+    }
+
+    if (isPrivate && !accessCode.trim()) {
+      alert('Enter an access code or auto-generate one to make this post private.');
       return;
     }
 
@@ -119,7 +136,9 @@ export default function CreatePost() {
       title: title || options.join(' or '),
       images,
       comment_count: 0,
-      created_by: user.id
+      created_by: user.id,
+      is_private: isPrivate,
+      access_code: isPrivate ? accessCode.trim() : null
     };
 
     postData.options = options;
@@ -245,6 +264,56 @@ export default function CreatePost() {
                   )}
                 </div>
               </label>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xl font-black mb-2 transform -rotate-1">
+              VISIBILITY
+            </label>
+            <div className="flex gap-3 mb-3">
+              <button
+                type="button"
+                onClick={() => setIsPrivate(false)}
+                className={`flex-1 p-3 border-4 border-black font-black ${
+                  !isPrivate ? 'bg-[#00FF00]' : 'bg-white'
+                }`}
+              >
+                Public
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPrivate(true)}
+                className={`flex-1 p-3 border-4 border-black font-black ${
+                  isPrivate ? 'bg-[#FFFF00]' : 'bg-white'
+                }`}
+              >
+                Private (code)
+              </button>
+            </div>
+            {isPrivate && (
+              <div className="space-y-2">
+                <label className="block text-sm font-bold">
+                  Access code you will share with your community
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                    maxLength={12}
+                    className="flex-1 p-3 border-4 border-black font-bold bg-white focus:outline-none focus:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+                    placeholder="e.g. ABC123"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGenerateCode}
+                    className="px-4 py-3 border-4 border-black bg-black text-[#FFFF00] font-black text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  >
+                    AUTO
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 

@@ -122,3 +122,14 @@ export async function checkAdminRole(userId: string): Promise<"admin" | null> {
   if (error || !data) return null;
   return data.role as "admin";
 }
+
+export async function checkPostCode(postId: string, code: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("check_post_code", {
+    post_id: postId,
+    code,
+  });
+  if (error) {
+    throw error;
+  }
+  return !!data;
+}
