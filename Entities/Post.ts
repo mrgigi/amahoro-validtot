@@ -8,7 +8,7 @@
         "comparison"
       ],
       "default": "comparison",
-      "description": "Type of post - comparison or single review"
+      "description": "Type of post - comparison"
     },
     "title": {
       "type": "string",

@@ -49,6 +49,7 @@ export default function PostCard({ post }) {
         if (!isMounted) return;
         setHasVoted(true);
         setUserVote(parseInt(existingVote));
+        setIsUnlocked(true);
         return;
       }
 
@@ -79,6 +80,7 @@ export default function PostCard({ post }) {
           localStorage.setItem(voteKey, index.toString());
           setHasVoted(true);
           setUserVote(index);
+          setIsUnlocked(true);
         }
       } catch (error) {
         console.error('Error preloading vote:', error);
@@ -186,6 +188,7 @@ export default function PostCard({ post }) {
       localStorage.setItem(`vote_${post.id}`, value.toString());
       setHasVoted(true);
       setUserVote(value);
+      setIsUnlocked(true);
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     }
   });
