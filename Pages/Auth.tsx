@@ -22,6 +22,7 @@ export default function Auth() {
   const [country, setCountry] = useState("");
   const [cohort, setCohort] = useState<"1" | "2" | "">("");
   const [jobTitle, setJobTitle] = useState("");
+  const [organization, setOrganization] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"signup" | "signin">("signin");
   const [authRole, setAuthRole] = useState<"voter" | "admin">("voter");
@@ -52,6 +53,9 @@ export default function Auth() {
           if (!jobTitle.trim()) {
             throw new Error("Please enter your job title or role to sign up as an admin.");
           }
+          if (!organization.trim()) {
+            throw new Error("Please enter your organization to sign up as an admin.");
+          }
         } else {
           if (!gender || !country || !cohort) {
             throw new Error("Please select your gender, country, and cohort to sign up.");
@@ -78,6 +82,7 @@ export default function Auth() {
               cohort: authRole === "voter" ? cohort : null,
               intended_role: authRole,
               job_title: authRole === "admin" ? jobTitle : null,
+              organization: authRole === "admin" ? organization : null,
             },
           },
         });
@@ -257,16 +262,28 @@ export default function Auth() {
           </div>
 
           {mode === "signup" && authRole === "admin" && (
-            <div>
-              <label className="block text-sm font-bold mb-1">Job title or role</label>
-              <input
-                type="text"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
-                placeholder="e.g. Campaign manager"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-bold mb-1">Job title or role</label>
+                <input
+                  type="text"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                  placeholder="e.g. Campaign manager"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Organization</label>
+                <input
+                  type="text"
+                  value={organization}
+                  onChange={(e) => setOrganization(e.target.value)}
+                  className="w-full p-3 border-4 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                  placeholder="e.g. Organization or campaign name"
+                />
+              </div>
+            </>
           )}
 
           {mode === "signup" && authRole === "voter" && (

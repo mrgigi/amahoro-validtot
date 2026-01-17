@@ -18,6 +18,14 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [adminOrganization, setAdminOrganization] = useState<string | null>(null);
+  const [isEditingAdmin, setIsEditingAdmin] = useState(false);
+  const [adminRoleInput, setAdminRoleInput] = useState("");
+  const [adminOrganizationInput, setAdminOrganizationInput] = useState("");
+  const [savingAdmin, setSavingAdmin] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -46,6 +54,22 @@ export default function Profile() {
 
       if (!error && data) {
         setProfile(data as ProfileRow);
+      }
+
+      const { data: adminRow, error: adminError } = await supabase
+        .from("admins")
+        .select("role, organization")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!adminError && adminRow) {
+        setIsAdmin(true);
+        setAdminRole((adminRow as any).role ?? null);
+        setAdminOrganization((adminRow as any).organization ?? null);
+      } else {
+        setIsAdmin(false);
+        setAdminRole(null);
+        setAdminOrganization(null);
       }
 
       setLoading(false);
@@ -109,6 +133,60 @@ export default function Profile() {
     );
   }
 
+  const roleLabel = isAdmin ? "Admin" : "Voter";
+
+  const handleStartEditAdmin = () => {
+    setAdminError(null);
+    setAdminRoleInput(adminRole ?? "");
+    setAdminOrganizationInput(adminOrganization ?? "");
+    setIsEditingAdmin(true);
+  };
+
+  const handleCancelEditAdmin = () => {
+    setIsEditingAdmin(false);
+    setAdminError(null);
+  };
+
+  const handleSaveAdminDetails = async () => {
+    setSavingAdmin(true);
+    setAdminError(null);
+    try {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setAdminError("You must be signed in to update admin details.");
+        setSavingAdmin(false);
+        return;
+      }
+
+      const updates: any = {
+        role: adminRoleInput || null,
+        organization: adminOrganizationInput || null,
+      };
+
+      const { error } = await supabase
+        .from("admins")
+        .update(updates)
+        .eq("user_id", user.id);
+
+      if (error) {
+        setAdminError(error.message || "Failed to update admin details.");
+        setSavingAdmin(false);
+        return;
+      }
+
+      setAdminRole(updates.role);
+      setAdminOrganization(updates.organization);
+      setIsEditingAdmin(false);
+    } catch (err: any) {
+      setAdminError(err.message || "Failed to update admin details.");
+    } finally {
+      setSavingAdmin(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] p-4">
       <div className="max-w-xl mx-auto">
@@ -139,6 +217,12 @@ export default function Profile() {
             </div>
           )}
           <div>
+            <div className="text-sm font-bold text-gray-600">Role</div>
+            <div className="font-bold">
+              {roleLabel}
+            </div>
+          </div>
+          <div>
             <div className="text-sm font-bold text-gray-600">Joined</div>
             <div className="font-bold">
               {new Date(profile.created_at).toLocaleString()}
@@ -164,6 +248,88 @@ export default function Profile() {
               </div>
             </div>
           </div>
+
+          {isAdmin && (
+            <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-bold text-gray-600">Admin details</div>
+                {!isEditingAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleStartEditAdmin}
+                    className="px-3 py-1 text-xs font-black border-2 border-black bg-[#FFFF00]"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+
+              {!isEditingAdmin && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-bold text-gray-600">Admin role</div>
+                    <div className="font-bold">
+                      {adminRole || "Not set"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-gray-600">Organization</div>
+                    <div className="font-bold">
+                      {adminOrganization || "Not set"}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isEditingAdmin && (
+                <div className="space-y-3">
+                  {adminError && (
+                    <div className="p-2 border-2 border-black bg-red-100 text-xs font-bold">
+                      {adminError}
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-sm font-bold text-gray-600">Admin role</div>
+                    <input
+                      type="text"
+                      value={adminRoleInput}
+                      onChange={(e) => setAdminRoleInput(e.target.value)}
+                      className="w-full p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                      placeholder="e.g. Campaign manager"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-gray-600">Organization</div>
+                    <input
+                      type="text"
+                      value={adminOrganizationInput}
+                      onChange={(e) => setAdminOrganizationInput(e.target.value)}
+                      className="w-full p-2 border-2 border-black font-bold bg-[#F5F5F5] focus:outline-none focus:bg-[#FFFF00] transition-colors"
+                      placeholder="e.g. Organization or campaign name"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveAdminDetails}
+                      disabled={savingAdmin}
+                      className="px-4 py-2 bg-[#00FF00] border-2 border-black font-black text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {savingAdmin ? "Saving..." : "Save changes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEditAdmin}
+                      disabled={savingAdmin}
+                      className="px-4 py-2 bg-white border-2 border-black font-black text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
