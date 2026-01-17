@@ -333,12 +333,6 @@ export default function PostCard({ post }) {
           })}
         </div>
 
-        {isLocked && (
-          <div className="mb-4 p-3 bg-white border-4 border-black font-bold text-center text-sm">
-            This post is private. Enter the access code from the organizer to unlock and vote.
-          </div>
-        )}
-
         {!isLocked && !hasVoted && (
           <div className="mb-4 p-3 bg-white border-4 border-black font-bold text-center">
             {`${post.total_votes || 0} vote${(post.total_votes || 0) !== 1 ? 's' : ''}`} • {post.comment_count || 0} comment{(post.comment_count || 0) !== 1 ? 's' : ''}
@@ -370,8 +364,9 @@ export default function PostCard({ post }) {
                 type="button"
                 onClick={handleUnlock}
                 disabled={unlocking}
-                className="px-4 py-3 bg-black text-[#FFFF00] border-4 border-black font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-3 bg-black text-[#FFFF00] border-4 border-black font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
+                <Lock className="w-4 h-4" />
                 {unlocking ? 'Checking...' : 'Unlock'}
               </button>
             </div>

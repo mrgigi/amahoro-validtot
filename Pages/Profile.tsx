@@ -20,6 +20,9 @@ export default function Profile() {
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [activeTab, setActiveTab] = useState<"posts" | "votes" | "account">(
+    "posts"
+  );
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileGenderInput, setProfileGenderInput] = useState("");
   const [profileCountryInput, setProfileCountryInput] = useState("");
@@ -552,119 +555,180 @@ export default function Profile() {
           )}
         </div>
 
-        <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-5 h-5" />
-            <h2 className="text-xl font-black">Your posts</h2>
-          </div>
-
-          {myPostsLoading ? (
-            <div className="text-sm font-bold text-gray-500">
-              Loading your posts...
-            </div>
-          ) : myPosts.length === 0 ? (
-            <div className="text-sm font-bold text-gray-500">
-              You haven&apos;t created any posts yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {myPosts.map((post: any) => {
-                const createdAt = post.created_at
-                  ? new Date(post.created_at).toLocaleString()
-                  : "Unknown time";
-                const votesCount = post.total_votes || 0;
-                const commentsCount = post.comment_count || 0;
-                const isHiddenPost = !!post.is_hidden;
-
-                return (
-                  <Link
-                    key={post.id}
-                    to={createPageUrl("Post", post.id)}
-                    className="block border-2 border-black p-3 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="font-black text-sm mb-1">
-                      {post.title || "Untitled post"}
-                    </div>
-                    <div className="text-xs font-bold text-gray-500 mb-1">
-                      Created: {createdAt}
-                    </div>
-                    <div className="text-xs font-bold text-gray-500">
-                      {votesCount} vote{votesCount !== 1 ? "s" : ""} •{" "}
-                      {commentsCount} comment{commentsCount !== 1 ? "s" : ""}
-                      {isHiddenPost && (
-                        <span className="ml-2 px-2 py-0.5 text-[10px] uppercase bg-red-600 text-white border border-black font-black">
-                          Hidden
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+        <div className="mt-6 flex gap-3 border-b-4 border-black pb-1 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab("posts")}
+            className={`flex items-center gap-2 px-4 py-2 font-black text-sm md:text-base whitespace-nowrap transition-all ${
+              activeTab === "posts"
+                ? "bg-black text-white translate-y-[2px]"
+                : "bg-transparent text-black hover:bg-gray-200"
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Your posts
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("votes")}
+            className={`flex items-center gap-2 px-4 py-2 font-black text-sm md:text-base whitespace-nowrap transition-all ${
+              activeTab === "votes"
+                ? "bg-black text-white translate-y-[2px]"
+                : "bg-transparent text-black hover:bg-gray-200"
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            Your votes
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("account")}
+            className={`flex items-center gap-2 px-4 py-2 font-black text-sm md:text-base whitespace-nowrap transition-all ${
+              activeTab === "account"
+                ? "bg-black text-white translate-y-[2px]"
+                : "bg-transparent text-black hover:bg-gray-200"
+            }`}
+          >
+            <LogOut className="w-4 h-4" />
+            Account & log out
+          </button>
         </div>
 
-        <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-5 h-5" />
-            <h2 className="text-xl font-black">Your recent votes</h2>
+        {activeTab === "posts" && (
+          <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <FileText className="w-5 h-5" />
+              <h2 className="text-xl font-black">Your posts</h2>
+            </div>
+
+            {myPostsLoading ? (
+              <div className="text-sm font-bold text-gray-500">
+                Loading your posts...
+              </div>
+            ) : myPosts.length === 0 ? (
+              <div className="text-sm font-bold text-gray-500">
+                You haven&apos;t created any posts yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {myPosts.map((post: any) => {
+                  const createdAt = post.created_at
+                    ? new Date(post.created_at).toLocaleString()
+                    : "Unknown time";
+                  const votesCount = post.total_votes || 0;
+                  const commentsCount = post.comment_count || 0;
+                  const isHiddenPost = !!post.is_hidden;
+
+                  return (
+                    <Link
+                      key={post.id}
+                      to={createPageUrl("Post", post.id)}
+                      className="block border-2 border-black p-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="font-black text-sm mb-1">
+                        {post.title || "Untitled post"}
+                      </div>
+                      <div className="text-xs font-bold text-gray-500 mb-1">
+                        Created: {createdAt}
+                      </div>
+                      <div className="text-xs font-bold text-gray-500">
+                        {votesCount} vote{votesCount !== 1 ? "s" : ""} •{" "}
+                        {commentsCount} comment{commentsCount !== 1 ? "s" : ""}
+                        {isHiddenPost && (
+                          <span className="ml-2 px-2 py-0.5 text-[10px] uppercase bg-red-600 text-white border border-black font-black">
+                            Hidden
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
+        )}
 
-          {votesLoading ? (
-            <div className="text-sm font-bold text-gray-500">
-              Loading your votes...
+        {activeTab === "votes" && (
+          <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-5 h-5" />
+              <h2 className="text-xl font-black">Your recent votes</h2>
             </div>
-          ) : votes.length === 0 ? (
-            <div className="text-sm font-bold text-gray-500">
-              You haven&apos;t voted on any posts yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {votes.map((vote: any) => {
-                const post = vote.post;
-                const options = post?.options || [];
-                const index =
-                  typeof vote.option_index === "number"
-                    ? vote.option_index
-                    : 0;
-                const choiceLabel =
-                  options[index] !== undefined
-                    ? options[index]
-                    : `Option #${index + 1}`;
-                const timestamp = vote.created_at
-                  ? new Date(vote.created_at).toLocaleString()
-                  : "Unknown time";
 
-                return (
-                  <Link
-                    key={vote.id}
-                    to={createPageUrl("Post", vote.post_id)}
-                    className="block border-2 border-black p-3 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="font-black text-sm mb-1">
-                      {post?.title || "Untitled post"}
-                    </div>
-                    <div className="text-sm font-bold text-gray-700">
-                      You voted for:{" "}
-                      <span className="font-black">{choiceLabel}</span>
-                    </div>
-                    <div className="text-xs font-bold text-gray-500 mt-1">
-                      {timestamp}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+            {votesLoading ? (
+              <div className="text-sm font-bold text-gray-500">
+                Loading your votes...
+              </div>
+            ) : votes.length === 0 ? (
+              <div className="text-sm font-bold text-gray-500">
+                You haven&apos;t voted on any posts yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {votes.map((vote: any) => {
+                  const post = vote.post;
+                  const options = post?.options || [];
+                  const index =
+                    typeof vote.option_index === "number"
+                      ? vote.option_index
+                      : 0;
+                  const choiceLabel =
+                    options[index] !== undefined
+                      ? options[index]
+                      : `Option #${index + 1}`;
+                  const timestamp = vote.created_at
+                    ? new Date(vote.created_at).toLocaleString()
+                    : "Unknown time";
 
-        <button
-          onClick={handleLogout}
-          className="w-full mt-6 p-4 bg-[#FF0000] text-white border-4 border-black font-black text-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2"
-        >
-          <LogOut className="w-6 h-6" />
-          LOG OUT
-        </button>
+                  return (
+                    <Link
+                      key={vote.id}
+                      to={createPageUrl("Post", vote.post_id)}
+                      className="block border-2 border-black p-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="font-black text-sm mb-1">
+                        {post?.title || "Untitled post"}
+                      </div>
+                      <div className="text-sm font-bold text-gray-700">
+                        You voted for:{" "}
+                        <span className="font-black">{choiceLabel}</span>
+                      </div>
+                      <div className="text-xs font-bold text-gray-500 mt-1">
+                        {timestamp}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "account" && (
+          <div className="mt-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <User className="w-5 h-5" />
+              <h2 className="text-xl font-black">Account & log out</h2>
+            </div>
+            {email && (
+              <div>
+                <div className="text-sm font-bold text-gray-600">Email</div>
+                <div className="font-bold">{email}</div>
+              </div>
+            )}
+            <div>
+              <div className="text-sm font-bold text-gray-600">Role</div>
+              <div className="font-bold">{roleLabel}</div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full mt-2 p-4 bg-[#FF0000] text-white border-4 border-black font-black text-lg shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2"
+            >
+              <LogOut className="w-6 h-6" />
+              LOG OUT
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
